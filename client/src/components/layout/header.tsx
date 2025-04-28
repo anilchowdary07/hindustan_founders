@@ -107,6 +107,15 @@ export default function Header() {
           >
             <MessageCircle size={20} />
           </Button>
+
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hidden md:flex text-white hover:bg-primary/90"
+            onClick={() => navigate("/notifications")}
+          >
+            <Bell size={20} />
+          </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

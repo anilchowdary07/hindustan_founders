@@ -15,7 +15,7 @@ interface MobileNavProps {
 
 export default function MobileNav({ activeTab }: MobileNavProps) {
   const [, navigate] = useLocation();
-  
+
   const navItems = [
     {
       name: "Home",

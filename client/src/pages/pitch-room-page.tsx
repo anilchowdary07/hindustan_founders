@@ -6,7 +6,7 @@ import PitchItem from "@/components/pitch/pitch-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PitchStatus, PitchStatusType } from "@shared/schema";
-import { Bell, Plus } from "lucide-react";
+import { Bell, Plus, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -100,7 +100,7 @@ export default function PitchRoomPage() {
       );
     }
 
-    if (!pitches || pitches.length === 0) {
+    if (!pitches || !Array.isArray(pitches) || pitches.length === 0) {
       return (
         <div className="bg-white rounded-lg shadow-md p-6 text-center mb-4">
           <h3 className="text-lg font-medium mb-2">No pitches found</h3>
@@ -111,7 +111,7 @@ export default function PitchRoomPage() {
       );
     }
 
-    return pitches.map((pitch: any) => (
+    return (pitches as any[]).map((pitch: any) => (
       <PitchItem key={pitch.id} pitch={pitch} />
     ));
   };

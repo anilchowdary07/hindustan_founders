@@ -10,7 +10,7 @@ import ActivityItem from "@/components/profile/activity-item";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -93,6 +93,18 @@ export default function ProfilePage() {
   // Use the profile user data if viewing own profile
   const displayUser = isCurrentUser ? profileUser ?? user : user;
   
+  // Make sure displayUser has the required properties for ProfileHeader
+  const userForProfile = {
+    id: displayUser && 'id' in displayUser ? displayUser.id : 0,
+    name: displayUser && 'name' in displayUser ? displayUser.name : "",
+    role: displayUser && 'role' in displayUser ? displayUser.role : "",
+    title: displayUser && 'title' in displayUser ? displayUser.title : undefined,
+    company: displayUser && 'company' in displayUser ? displayUser.company : undefined,
+    location: displayUser && 'location' in displayUser ? displayUser.location : undefined,
+    bio: displayUser && 'bio' in displayUser ? displayUser.bio : undefined,
+    avatarUrl: displayUser && 'avatarUrl' in displayUser ? displayUser.avatarUrl : undefined,
+  };
+  
   const handleExperienceSubmit = () => {
     if (!experienceData.title || !experienceData.company) {
       toast({
@@ -114,7 +126,7 @@ export default function ProfilePage() {
         <Skeleton className="h-64 w-full mb-6" />
       ) : (
         <ProfileHeader 
-          user={displayUser} 
+          user={userForProfile} 
           isCurrentUser={isCurrentUser} 
         />
       )}
@@ -130,7 +142,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           <p className="text-gray-700">
-            {displayUser?.bio || "This user hasn't added a bio yet."}
+            {userForProfile.bio || "This user hasn't added a bio yet."}
           </p>
         )}
       </div>
@@ -253,7 +265,7 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
-        ) : experiences?.length > 0 ? (
+        ) : experiences && Array.isArray(experiences) && experiences.length > 0 ? (
           experiences.map((exp: any) => (
             <ExperienceItem key={exp.id} experience={exp} />
           ))
@@ -287,7 +299,7 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
-        ) : posts?.length > 0 ? (
+        ) : posts && Array.isArray(posts) && posts.length > 0 ? (
           posts.map((post: any) => (
             <ActivityItem 
               key={post.id} 
@@ -298,7 +310,7 @@ export default function ProfilePage() {
                 user: {
                   id: user.id,
                   name: user.name,
-                  avatarUrl: user.avatarUrl,
+                  avatarUrl: user.avatarUrl || undefined,
                 },
               }} 
             />

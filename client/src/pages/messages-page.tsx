@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, Search, UserPlus, Star, PhoneCall, Video, Info, MoreVertical } from "lucide-react";
+import { Send, Search, UserPlus, Star, PhoneCall, Video, Info, MoreVertical, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 interface Message {
@@ -419,7 +419,7 @@ export default function MessagesPage() {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                 <div className="bg-gray-100 dark:bg-gray-700 rounded-full p-6 mb-4">
-                  <MessageCircle size={48} className="text-gray-400 dark:text-gray-300" />
+                  <MessageSquare size={48} className="text-gray-400 dark:text-gray-300" />
                 </div>
                 <h3 className="text-xl font-medium mb-2">Your Messages</h3>
                 <p className="text-gray-500 dark:text-gray-400 max-w-md mb-4">

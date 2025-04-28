@@ -222,7 +222,7 @@ export default function NotificationsPage() {
                 .map((notification) => (
                   <div 
                     key={notification.id}
-                    className={`flex items-start gap-3 p-4 rounded-lg hover:bg-gray-50 ${!notification.read ? 'bg-blue-50/50' : ''}`}
+                    className={`flex items-start gap-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 ${!notification.read ? 'bg-blue-50/50 dark:bg-blue-900/20' : 'dark:bg-gray-800'}`}
                   >
                     <Avatar>
                       <AvatarFallback>{notification.user.name.charAt(0)}</AvatarFallback>
@@ -230,20 +230,20 @@ export default function NotificationsPage() {
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <p className="text-sm">
+                        <p className="text-sm dark:text-gray-200">
                           <span className="font-semibold">{notification.user.name}</span> {notification.text}
                         </p>
-                        <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{formatTime(notification.timestamp)}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">{formatTime(notification.timestamp)}</span>
                       </div>
                       <div className="flex mt-2">
-                        <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                        <div className="h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-2">
                           <UserPlus className="h-4 w-4" />
                         </div>
                         {!notification.read && (
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className="ml-auto h-7 text-xs"
+                            className="ml-auto h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                             onClick={() => markAsRead(notification.id)}
                           >
                             <Check className="h-3 w-3 mr-1" /> Mark as read

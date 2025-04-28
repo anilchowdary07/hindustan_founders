@@ -61,6 +61,9 @@ export default function Header() {
             <Link href="/">
               <div className="text-white hover:text-blue-200 cursor-pointer">Home</div>
             </Link>
+            <Link href="/network">
+              <div className="text-white hover:text-blue-200 cursor-pointer">Network</div>
+            </Link>
             <Link href="/jobs">
               <div className="text-white hover:text-blue-200 cursor-pointer">Jobs</div>
             </Link>

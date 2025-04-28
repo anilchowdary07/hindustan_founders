@@ -13,6 +13,8 @@ import PitchRoomPage from "@/pages/pitch-room-page";
 import JobsPage from "@/pages/jobs-page";
 import JobDetailPage from "@/pages/job-detail-page";
 import CreateJobPage from "@/pages/create-job-page";
+import NetworkPage from "@/pages/network-page";
+import SettingsPage from "@/pages/settings-page";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
@@ -22,6 +24,8 @@ function Router() {
       <ProtectedRoute path="/role-selection" component={RoleSelectionPage} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/profile/:id?" component={ProfilePage} />
+      <ProtectedRoute path="/network" component={NetworkPage} />
+      <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/pitch-room" component={PitchRoomPage} />
       <ProtectedRoute path="/jobs/create" component={CreateJobPage} />
       <Route path="/jobs/:jobId" component={JobDetailPage} />

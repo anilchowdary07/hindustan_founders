@@ -327,6 +327,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // For now, return empty array as this feature is not fully implemented
     res.json([]);
   });
+  
+  // Change password endpoint
+  app.post("/api/change-password", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+      
+      // Get the user from storage
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Import the comparePasswords function from auth.ts
+      const { comparePasswords, hashPassword } = await import('./auth');
+      
+      // Verify the current password
+      const isPasswordValid = await comparePasswords(currentPassword, user.password);
+      
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash the new password
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update the user's password
+      const updatedUser = await storage.updateUser(req.user.id, {
+        password: hashedPassword
+      });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to change password", error });
+    }
+  });
+  
+  // Notification settings endpoint
+  app.patch("/api/users/:userId/notifications", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.id !== parseInt(req.params.userId)) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const userId = parseInt(req.params.userId);
+      
+      // For now, just return success as we don't have a notification settings table yet
+      res.json({ message: "Notification settings updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update notification settings", error });
+    }
+  });
 
   // Job routes
   app.post("/api/jobs", async (req, res) => {

@@ -262,10 +262,27 @@ export class DatabaseStorage implements IStorage {
       
       console.log("Creating user with username:", insertUser.username);
       
+      // Check if we need to hash the password
+      let password = insertUser.password;
+      if (!password.startsWith('$2')) {
+        // Password is not already hashed, so hash it
+        try {
+          // Import the hashPassword function from auth.ts
+          const { hashPassword } = await import('./auth');
+          password = await hashPassword(password);
+        } catch (hashError) {
+          console.error("Error hashing password:", hashError);
+          // Use a simple hash for the default user if the import fails
+          const crypto = await import('crypto');
+          password = crypto.createHash('sha256').update(password).digest('hex');
+        }
+      }
+      
       const [user] = await db
         .insert(users)
         .values({
           ...insertUser,
+          password,
           profileCompleted: 20,
           isVerified: false
         })
@@ -293,27 +310,103 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Post methods
-  async createPost(insertPost: InsertPost): Promise<Post> {
-    const [post] = await db
-      .insert(posts)
-      .values(insertPost)
-      .returning();
-    return post;
+  async createPost(insertPost: InsertPost): Promise<any> {
+    try {
+      // Insert the post
+      const [post] = await db
+        .insert(posts)
+        .values(insertPost)
+        .returning();
+      
+      // Get the user information
+      const [user] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          username: users.username,
+          role: users.role,
+          company: users.company,
+          title: users.title,
+          avatarUrl: users.avatarUrl,
+          isVerified: users.isVerified
+        })
+        .from(users)
+        .where(eq(users.id, insertPost.userId));
+      
+      // Return the post with user information
+      return {
+        ...post,
+        user
+      };
+    } catch (error) {
+      console.error("Error creating post:", error);
+      throw error;
+    }
   }
 
-  async getPosts(): Promise<Post[]> {
-    return await db
-      .select()
-      .from(posts)
-      .orderBy(desc(posts.createdAt));
+  async getPosts(): Promise<any[]> {
+    try {
+      // Join posts with users to get user information
+      const result = await db
+        .select({
+          post: posts,
+          user: {
+            id: users.id,
+            name: users.name,
+            username: users.username,
+            role: users.role,
+            company: users.company,
+            title: users.title,
+            avatarUrl: users.avatarUrl,
+            isVerified: users.isVerified
+          }
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.userId, users.id))
+        .orderBy(desc(posts.createdAt));
+      
+      // Transform the result to match the expected format
+      return result.map(item => ({
+        ...item.post,
+        user: item.user
+      }));
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      throw error;
+    }
   }
 
-  async getPostsByUserId(userId: number): Promise<Post[]> {
-    return await db
-      .select()
-      .from(posts)
-      .where(eq(posts.userId, userId))
-      .orderBy(desc(posts.createdAt));
+  async getPostsByUserId(userId: number): Promise<any[]> {
+    try {
+      // Join posts with users to get user information
+      const result = await db
+        .select({
+          post: posts,
+          user: {
+            id: users.id,
+            name: users.name,
+            username: users.username,
+            role: users.role,
+            company: users.company,
+            title: users.title,
+            avatarUrl: users.avatarUrl,
+            isVerified: users.isVerified
+          }
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.userId, users.id))
+        .where(eq(posts.userId, userId))
+        .orderBy(desc(posts.createdAt));
+      
+      // Transform the result to match the expected format
+      return result.map(item => ({
+        ...item.post,
+        user: item.user
+      }));
+    } catch (error) {
+      console.error(`Error fetching posts for user ${userId}:`, error);
+      throw error;
+    }
   }
 
   // Pitch methods

@@ -507,61 +507,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Seed some initial pitches if none exist
   const seedInitialData = async () => {
-    const pitches = await storage.getPitches();
-    
-    if (pitches.length === 0) {
-      // Create default pitches
-      const defaultPitches = [
-        {
-          userId: 1,
-          name: "EcoMart",
-          description: "Sustainable online marketplace",
-          location: "India (Remote)",
-          status: PitchStatus.IDEA,
-          category: "E-commerce",
-        },
-        {
-          userId: 1,
-          name: "FinEdge",
-          description: "Empowering investors through tech",
-          location: "India (Remote)",
-          status: PitchStatus.REGISTERED,
-          category: "FinTech",
-        },
-        {
-          userId: 1,
-          name: "AgroSense",
-          description: "Smart agriculture solutions",
-          location: "India (Remote)",
-          status: PitchStatus.IDEA,
-          category: "AgriTech",
-        },
-        {
-          userId: 1,
-          name: "ClickCart",
-          description: "E-commerce simplified",
-          location: "India (Remote)",
-          status: PitchStatus.IDEA,
-          category: "E-commerce",
-        },
-        {
-          userId: 1,
-          name: "ZeptoX",
-          description: "On-demand delivery service",
-          location: "India (Remote)",
-          status: PitchStatus.REGISTERED,
-          category: "Logistics",
-        },
-      ];
-
-      for (const pitch of defaultPitches) {
-        await storage.createPitch(pitch as InsertPitch);
+    try {
+      // First check if we have a default user, if not create one
+      let defaultUser;
+      try {
+        defaultUser = await storage.getUserByUsername('founder');
+        
+        if (!defaultUser) {
+          console.log('Creating default user...');
+          defaultUser = await storage.createUser({
+            username: 'founder',
+            password: 'password123', // This will be hashed by the storage layer
+            name: 'Demo Founder',
+            email: 'demo@foundernetwork.com',
+            role: 'founder',
+            title: 'CEO',
+            company: 'Demo Startup',
+            location: 'India',
+            bio: 'Demo account for testing'
+          });
+          console.log('Default user created with ID:', defaultUser.id);
+        }
+      } catch (error) {
+        console.error('Error checking/creating default user:', error);
+        // Continue with seeding even if user creation fails
       }
+      
+      // Now try to seed pitches
+      try {
+        const pitches = await storage.getPitches();
+        
+        if (pitches.length === 0 && defaultUser) {
+          console.log('Seeding initial pitches...');
+          // Create default pitches
+          const defaultPitches = [
+            {
+              userId: defaultUser.id,
+              name: "EcoMart",
+              description: "Sustainable online marketplace",
+              location: "India (Remote)",
+              status: PitchStatus.IDEA,
+              category: "E-commerce",
+            },
+            {
+              userId: defaultUser.id,
+              name: "FinEdge",
+              description: "Empowering investors through tech",
+              location: "India (Remote)",
+              status: PitchStatus.REGISTERED,
+              category: "FinTech",
+            },
+            {
+              userId: defaultUser.id,
+              name: "AgroSense",
+              description: "Smart agriculture solutions",
+              location: "India (Remote)",
+              status: PitchStatus.IDEA,
+              category: "AgriTech",
+            },
+            {
+              userId: defaultUser.id,
+              name: "ClickCart",
+              description: "E-commerce simplified",
+              location: "India (Remote)",
+              status: PitchStatus.IDEA,
+              category: "E-commerce",
+            },
+            {
+              userId: defaultUser.id,
+              name: "ZeptoX",
+              description: "On-demand delivery service",
+              location: "India (Remote)",
+              status: PitchStatus.REGISTERED,
+              category: "Logistics",
+            },
+          ];
+
+          for (const pitch of defaultPitches) {
+            await storage.createPitch(pitch as InsertPitch);
+          }
+          console.log('Initial pitches seeded successfully');
+        }
+      } catch (error) {
+        console.error('Error seeding pitches:', error);
+        // Just log the error but don't throw, to allow the server to start
+      }
+    } catch (error) {
+      console.error('Error in seedInitialData:', error);
     }
   };
 
-  // Call the seed function after startup
-  setTimeout(seedInitialData, 1000);
+  // Call the seed function after startup with a longer delay to ensure DB is ready
+  setTimeout(seedInitialData, 3000);
 
   const httpServer = createServer(app);
   return httpServer;

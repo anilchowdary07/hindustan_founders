@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { LeafIcon } from "../ui/leaf-icon";
 
@@ -22,6 +23,7 @@ const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.string().min(1, "Role is required"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -46,6 +48,7 @@ export default function AuthForm() {
       email: "",
       username: "",
       password: "",
+      role: "founder", // Default role
     },
   });
 
@@ -54,10 +57,8 @@ export default function AuthForm() {
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate({
-      ...data,
-      role: "", // This will be set in the role selection step
-    });
+    // Use the role from the form data
+    registerMutation.mutate(data);
   };
 
   return (
@@ -228,6 +229,29 @@ export default function AuthForm() {
                         <FormControl>
                           <Input type="password" placeholder="Create a password" {...field} />
                         </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={registerForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>I am a</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="founder">Founder</SelectItem>
+                            <SelectItem value="investor">Investor</SelectItem>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="job_seeker">Job Seeker</SelectItem>
+                            <SelectItem value="explorer">Explorer</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -53,32 +53,53 @@ export default function PostItem({ post }: PostItemProps) {
 
   const hasMedia = post.media && post.media.length > 0;
 
+  // Check if user data exists
+  const hasUserData = post.user && post.user.id;
+
   return (
     <Card className="mb-4">
       <CardContent className="p-4">
         <div className="flex items-start">
-          <Link href={`/profile/${post.user.id}`}>
-            <Avatar className="h-12 w-12 cursor-pointer flex-shrink-0">
-              <AvatarImage src={post.user.avatarUrl || ""} />
-              <AvatarFallback className="bg-primary text-white">
-                {getInitials(post.user.name)}
+          {hasUserData ? (
+            <Link href={`/profile/${post.user.id}`}>
+              <Avatar className="h-12 w-12 cursor-pointer flex-shrink-0">
+                <AvatarImage src={post.user.avatarUrl || ""} />
+                <AvatarFallback className="bg-primary text-white">
+                  {getInitials(post.user.name)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          ) : (
+            <Avatar className="h-12 w-12 flex-shrink-0">
+              <AvatarFallback className="bg-gray-300 text-gray-600">
+                ?
               </AvatarFallback>
             </Avatar>
-          </Link>
+          )}
           
           <div className="ml-3">
             <div className="flex items-center">
-              <Link href={`/profile/${post.user.id}`}>
-                <span className="font-medium hover:underline cursor-pointer">{post.user.name}</span>
-              </Link>
-              <span className="text-primary ml-1 text-sm">• {getRoleDisplay(post.user.role)}</span>
-              {post.user.isVerified && (
+              {hasUserData ? (
+                <>
+                  <Link href={`/profile/${post.user.id}`}>
+                    <span className="font-medium hover:underline cursor-pointer">{post.user.name}</span>
+                  </Link>
+                  <span className="text-primary ml-1 text-sm">• {getRoleDisplay(post.user.role)}</span>
+                </>
+              ) : (
+                <span className="font-medium text-gray-500">Unknown User</span>
+              )}
+              {hasUserData && post.user.isVerified && (
                 <Badge variant="outline" className="ml-1 bg-blue-50 text-primary text-xs py-0 px-1 border-primary">
                   Verified
                 </Badge>
               )}
             </div>
-            <p className="text-gray-500 text-sm">{post.user.title || post.user.company || ""}</p>
+            {hasUserData ? (
+              <p className="text-gray-500 text-sm">{post.user.title || post.user.company || ""}</p>
+            ) : (
+              <p className="text-gray-500 text-sm">Unknown</p>
+            )}
             <p className="text-gray-500 text-xs">{getTimeAgo(post.createdAt)}</p>
           </div>
         </div>

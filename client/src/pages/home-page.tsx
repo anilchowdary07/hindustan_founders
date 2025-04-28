@@ -60,11 +60,11 @@ export default function HomePage() {
       );
     }
 
-    if (!posts || posts.length === 0) {
+    if (!posts || !Array.isArray(posts) || posts.length === 0) {
       return <SamplePosts />;
     }
 
-    return posts?.map((post: any) => (
+    return (posts as any[]).map((post: any) => (
       <PostItem key={post.id} post={post} />
     ));
   };

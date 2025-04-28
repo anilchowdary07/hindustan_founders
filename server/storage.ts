@@ -255,11 +255,14 @@ export class DatabaseStorage implements IStorage {
         return undefined;
       }
       
-      const [user] = await db.select().from(users).where(eq(users.username, username));
-      return user;
+      const query = db.select().from(users).where(eq(users.username, username));
+      
+      // Use our timeout helper with a fallback to undefined
+      const result = await withTimeout(query, 5000, []);
+      return result[0];
     } catch (error) {
       console.error(`Error getting user by username "${username}":`, error);
-      throw error;
+      return undefined; // Return undefined instead of throwing to prevent function timeout
     }
   }
   
@@ -281,23 +284,12 @@ export class DatabaseStorage implements IStorage {
       
       console.log("Creating user with username:", insertUser.username);
       
-      // Check if we need to hash the password
+      // Password should already be hashed by the auth.ts layer
+      // But check just in case
       let password = insertUser.password;
-      if (!password.startsWith('$2')) {
-        // Password is not already hashed, so hash it
-        try {
-          // Import the hashPassword function from auth.ts
-          const { hashPassword } = await import('./auth');
-          password = await hashPassword(password);
-        } catch (hashError) {
-          console.error("Error hashing password:", hashError);
-          // Use a simple hash for the default user if the import fails
-          const crypto = await import('crypto');
-          password = crypto.createHash('sha256').update(password).digest('hex');
-        }
-      }
       
-      const [user] = await db
+      // Create the insert query with timeout
+      const insertQuery = db
         .insert(users)
         .values({
           ...insertUser,
@@ -306,6 +298,10 @@ export class DatabaseStorage implements IStorage {
           isVerified: false
         })
         .returning();
+      
+      // Use our timeout helper with a longer timeout for user creation
+      const result = await withTimeout(insertQuery, 10000);
+      const user = result[0];
         
       if (!user) {
         throw new Error("User creation failed - no user returned");

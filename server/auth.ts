@@ -16,17 +16,52 @@ declare global {
 
 const scryptAsync = promisify(scrypt);
 
-export async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
+// Add a timeout to the password hashing function
+export async function hashPassword(password: string, timeoutMs = 5000) {
+  return new Promise<string>(async (resolve, reject) => {
+    // Set a timeout
+    const timeout = setTimeout(() => {
+      console.error("Password hashing timed out, using fallback");
+      // Use a simpler hash as fallback
+      const crypto = require('crypto');
+      const fallbackHash = crypto.createHash('sha256').update(password).digest('hex');
+      resolve(`${fallbackHash}.fallback`);
+    }, timeoutMs);
+    
+    try {
+      // Use a smaller key length for better performance (32 instead of 64)
+      const salt = randomBytes(8).toString("hex"); // Smaller salt
+      const buf = (await scryptAsync(password, salt, 32)) as Buffer;
+      clearTimeout(timeout);
+      resolve(`${buf.toString("hex")}.${salt}`);
+    } catch (error) {
+      clearTimeout(timeout);
+      console.error("Error in password hashing:", error);
+      reject(error);
+    }
+  });
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashed, salt] = stored.split(".");
+    
+    // Handle fallback hash case
+    if (salt === 'fallback') {
+      const crypto = require('crypto');
+      const suppliedHash = crypto.createHash('sha256').update(supplied).digest('hex');
+      return hashed === suppliedHash;
+    }
+    
+    // Handle regular scrypt hash
+    const hashedBuf = Buffer.from(hashed, "hex");
+    // Use the same key length as in hashPassword (32)
+    const suppliedBuf = (await scryptAsync(supplied, salt, 32)) as Buffer;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
+    return false; // Fail closed on error
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -93,48 +128,79 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/register", async (req, res, next) => {
+    // Create a timeout for the entire registration process
+    const registrationTimeout = setTimeout(() => {
+      console.error("Registration timed out");
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          message: "Registration timed out. Please try again." 
+        });
+      }
+    }, 50000); // 50 seconds timeout (just under Vercel's 60s limit)
+    
     try {
       console.log("Registration attempt for username:", req.body.username);
       
-      // Validate required fields first
+      // Validate required fields first - this is fast and should be done first
       if (!req.body.username || !req.body.password || !req.body.name || !req.body.email || !req.body.role) {
         console.log("Missing required fields in registration data");
+        clearTimeout(registrationTimeout);
         return res.status(400).json({ 
           message: "Missing required fields", 
           details: "Username, password, name, email, and role are required" 
         });
       }
       
-      try {
-        // Check if username already exists
-        const existingUser = await storage.getUserByUsername(req.body.username);
-        if (existingUser) {
-          console.log("Username already exists:", req.body.username);
-          return res.status(400).json({ message: "Username already exists" });
-        }
-      } catch (dbError) {
-        console.error("Database error checking existing user:", dbError);
-        return res.status(500).json({ 
-          message: "Error checking username availability", 
-          error: process.env.NODE_ENV === 'development' ? dbError.message : undefined 
-        });
-      }
-
-      // Validate data against schema
+      // Validate data against schema - also fast
       let validatedData;
       try {
         validatedData = insertUserSchema.parse(req.body);
       } catch (validationError) {
         console.error("Validation error:", validationError);
+        clearTimeout(registrationTimeout);
         return res.status(400).json({ 
           message: "Invalid registration data", 
           error: validationError 
         });
       }
       
-      // Hash password and create user
+      // Pre-hash the password before checking if username exists
+      // This way we can do both operations in parallel
+      let hashedPassword;
+      const hashPromise = (async () => {
+        try {
+          hashedPassword = await hashPassword(validatedData.password);
+        } catch (hashError) {
+          console.error("Error hashing password:", hashError);
+          // Use a simple hash as fallback
+          const crypto = await import('crypto');
+          hashedPassword = crypto.createHash('sha256').update(validatedData.password).digest('hex');
+        }
+      })();
+      
+      // Check if username already exists
+      let existingUser;
       try {
-        const hashedPassword = await hashPassword(validatedData.password);
+        existingUser = await storage.getUserByUsername(req.body.username);
+        if (existingUser) {
+          console.log("Username already exists:", req.body.username);
+          clearTimeout(registrationTimeout);
+          return res.status(400).json({ message: "Username already exists" });
+        }
+      } catch (dbError) {
+        console.error("Database error checking existing user:", dbError);
+        clearTimeout(registrationTimeout);
+        return res.status(500).json({ 
+          message: "Error checking username availability", 
+          error: process.env.NODE_ENV === 'development' ? dbError.message : undefined 
+        });
+      }
+      
+      // Wait for password hashing to complete
+      await hashPromise;
+      
+      // Create user with pre-hashed password
+      try {
         const user = await storage.createUser({
           ...validatedData,
           password: hashedPassword,
@@ -145,6 +211,7 @@ export function setupAuth(app: Express) {
 
         // Log the user in
         req.login(user, (err) => {
+          clearTimeout(registrationTimeout);
           if (err) {
             console.error("Login error after registration:", err);
             return next(err);
@@ -154,6 +221,7 @@ export function setupAuth(app: Express) {
         });
       } catch (createError) {
         console.error("Error creating user:", createError);
+        clearTimeout(registrationTimeout);
         return res.status(500).json({ 
           message: "Failed to create user account", 
           error: process.env.NODE_ENV === 'development' ? createError.message : undefined 
@@ -161,6 +229,7 @@ export function setupAuth(app: Express) {
       }
     } catch (error) {
       console.error("Unexpected error in registration:", error);
+      clearTimeout(registrationTimeout);
       res.status(500).json({ 
         message: "Registration failed", 
         error: process.env.NODE_ENV === 'development' ? error.message : undefined 

@@ -5,13 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { ThumbsUp, MessageSquare, Share2, Send } from "lucide-react";
+import { ThumbsUp, MessageSquare, Share2, Send, ZoomIn } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface PostItemProps {
   post: {
     id: number;
     content: string;
     createdAt: Date;
+    media?: string | null;
     user: {
       id: number;
       name: string;
@@ -27,6 +29,7 @@ interface PostItemProps {
 
 export default function PostItem({ post }: PostItemProps) {
   const [liked, setLiked] = useState(false);
+  const [imageOpen, setImageOpen] = useState(false);
   
   const getInitials = (name: string) => {
     return name
@@ -44,6 +47,8 @@ export default function PostItem({ post }: PostItemProps) {
   const getTimeAgo = (date: Date) => {
     return formatDistanceToNow(new Date(date), { addSuffix: true });
   };
+
+  const hasMedia = post.media && post.media.length > 0;
 
   return (
     <Card className="mb-4">
@@ -80,6 +85,32 @@ export default function PostItem({ post }: PostItemProps) {
             <p key={i} className="text-gray-700 mb-2">{paragraph}</p>
           ))}
         </div>
+
+        {hasMedia && (
+          <div className="mt-3 relative">
+            <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+              <DialogTrigger asChild>
+                <div className="relative cursor-pointer group">
+                  <img 
+                    src={post.media} 
+                    alt="Post media" 
+                    className="w-full rounded-md max-h-96 object-contain bg-gray-50"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 flex items-center justify-center transition-all group-hover:bg-opacity-20">
+                    <ZoomIn className="text-white scale-0 group-hover:scale-100 transition-all" />
+                  </div>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl p-2 bg-black bg-opacity-90">
+                <img 
+                  src={post.media} 
+                  alt="Post media" 
+                  className="w-full h-full object-contain"
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </CardContent>
       
       <CardFooter className="px-4 py-1 border-t flex justify-between">

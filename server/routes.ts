@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
@@ -6,12 +6,56 @@ import {
   insertPostSchema, 
   insertPitchSchema, 
   insertExperienceSchema,
-  PitchStatus
+  PitchStatus,
+  InsertPitch
 } from "@shared/schema";
+// @ts-ignore - Fix multer TypeScript issues
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), "uploads");
+
+// Ensure the upload directory exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage_config = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({ 
+  storage: storage_config,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    // Accept only images
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!') as any);
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+
+  // Serve static files from uploads directory
+  app.use('/uploads', (req, res, next) => {
+    // Set cache control headers to improve performance
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    next();
+  }, fs.existsSync(uploadDir) ? express.static(uploadDir) : (req, res, next) => next());
 
   // Post routes
   app.post("/api/posts", async (req, res) => {
@@ -30,6 +74,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: "Invalid post data", error });
     }
+  });
+  
+  // Post with image upload
+  app.post("/api/posts/with-image", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // @ts-ignore - Handle multer TypeScript issues
+    upload.single('image')(req, res, async (err: any) => {
+      if (err) {
+        return res.status(400).json({ message: "File upload failed", error: err.message });
+      }
+      
+      try {
+        // @ts-ignore - Handle multer TypeScript issues
+        const file = req.file;
+        
+        if (!file) {
+          return res.status(400).json({ message: "No image file provided" });
+        }
+        
+        // Create relative path to the uploaded file for storage
+        const mediaPath = `/uploads/${file.filename}`;
+        
+        // Validate and create post
+        const validatedData = insertPostSchema.parse({
+          content: req.body.content,
+          userId: req.user.id,
+          media: mediaPath
+        });
+        
+        const post = await storage.createPost(validatedData);
+        res.status(201).json(post);
+      } catch (error) {
+        res.status(400).json({ message: "Invalid post data", error });
+      }
+    });
   });
 
   app.get("/api/posts", async (req, res) => {

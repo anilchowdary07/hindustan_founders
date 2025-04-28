@@ -179,9 +179,9 @@ export default function ChatSidebar() {
   }
   
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-80 sm:w-96 h-[500px] bg-white rounded-lg shadow-xl flex flex-col border border-gray-200">
+    <div className="fixed bottom-5 right-5 z-50 w-80 sm:w-96 h-[500px] bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col border border-gray-200 dark:border-gray-700">
       {/* Header */}
-      <div className="px-4 py-3 border-b flex justify-between items-center bg-primary text-white rounded-t-lg">
+      <div className="px-4 py-3 border-b dark:border-gray-700 flex justify-between items-center bg-primary text-white rounded-t-lg">
         <h3 className="font-medium">Messages</h3>
         <div className="flex gap-2">
           <Button 
@@ -197,10 +197,10 @@ export default function ChatSidebar() {
       
       {/* Tabs (when no chat is active) */}
       {!activeChat && (
-        <div className="flex border-b">
+        <div className="flex border-b dark:border-gray-700">
           <Button
             variant="ghost"
-            className={`flex-1 rounded-none ${activeTab === 'chats' ? 'border-b-2 border-primary' : ''}`}
+            className={`flex-1 rounded-none dark:text-gray-200 ${activeTab === 'chats' ? 'border-b-2 border-primary dark:text-white' : ''}`}
             onClick={() => setActiveTab('chats')}
           >
             <MessageSquare size={16} className="mr-2" />
@@ -208,7 +208,7 @@ export default function ChatSidebar() {
           </Button>
           <Button
             variant="ghost"
-            className={`flex-1 rounded-none ${activeTab === 'contacts' ? 'border-b-2 border-primary' : ''}`}
+            className={`flex-1 rounded-none dark:text-gray-200 ${activeTab === 'contacts' ? 'border-b-2 border-primary dark:text-white' : ''}`}
             onClick={() => setActiveTab('contacts')}
           >
             <Users size={16} className="mr-2" />
@@ -223,7 +223,7 @@ export default function ChatSidebar() {
           {contacts.map((contact) => (
             <div 
               key={contact.id}
-              className="px-4 py-3 border-b hover:bg-gray-50 cursor-pointer"
+              className="px-4 py-3 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
               onClick={() => setActiveChat(contact.id)}
             >
               <div className="flex items-start gap-3">
@@ -233,15 +233,15 @@ export default function ChatSidebar() {
                     {contact.avatarUrl && <AvatarImage src={contact.avatarUrl} />}
                   </Avatar>
                   {contact.online && (
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800"></span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
-                    <h4 className="font-medium truncate">{contact.name}</h4>
-                    <span className="text-xs text-gray-500">{formatTime(contact.timestamp)}</span>
+                    <h4 className="font-medium truncate dark:text-white">{contact.name}</h4>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatTime(contact.timestamp)}</span>
                   </div>
-                  <p className="text-sm text-gray-600 truncate">{contact.lastMessage}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{contact.lastMessage}</p>
                 </div>
                 {contact.unread > 0 && (
                   <div className="ml-2 h-5 min-w-5 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">

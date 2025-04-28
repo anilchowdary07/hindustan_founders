@@ -137,32 +137,35 @@ export default function NotificationsPage() {
   return (
     <Layout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Notifications</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Notifications</h1>
         {unreadCount > 0 && (
           <Button 
             variant="outline"
             onClick={markAllAsRead}
+            className="dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
           >
+            <Check className="h-4 w-4 mr-2" />
             Mark all as read
           </Button>
         )}
       </div>
       
-      <Tabs defaultValue="all" className="mb-6">
-        <TabsList>
-          <TabsTrigger value="all">
-            All
-            {unreadCount > 0 && (
-              <span className="ml-2 h-5 min-w-5 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="connections">Connections</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
-          <TabsTrigger value="startups">Startups</TabsTrigger>
-        </TabsList>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <Tabs defaultValue="all" className="mb-6">
+          <TabsList className="bg-gray-100 dark:bg-gray-700">
+            <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800">
+              All
+              {unreadCount > 0 && (
+                <span className="ml-2 h-5 min-w-5 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="connections" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800">Connections</TabsTrigger>
+            <TabsTrigger value="messages" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800">Messages</TabsTrigger>
+            <TabsTrigger value="jobs" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800">Jobs</TabsTrigger>
+            <TabsTrigger value="startups" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800">Startups</TabsTrigger>
+          </TabsList>
         
         <TabsContent value="all" className="mt-4">
           <div className="space-y-1">
@@ -178,20 +181,20 @@ export default function NotificationsPage() {
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
-                      <p className="text-sm">
+                      <p className="text-sm dark:text-gray-200">
                         <span className="font-semibold">{notification.user.name}</span> {notification.text}
                       </p>
-                      <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{formatTime(notification.timestamp)}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">{formatTime(notification.timestamp)}</span>
                     </div>
                     <div className="flex mt-2">
-                      <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                      <div className="h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-2">
                         {getNotificationIcon(notification.type)}
                       </div>
                       {!notification.read && (
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="ml-auto h-7 text-xs"
+                          className="ml-auto h-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                           onClick={() => markAsRead(notification.id)}
                         >
                           <Check className="h-3 w-3 mr-1" /> Mark as read
@@ -407,6 +410,7 @@ export default function NotificationsPage() {
           </div>
         </TabsContent>
       </Tabs>
+      </div>
     </Layout>
   );
 }

@@ -10,6 +10,8 @@ import {
   Heart, 
   Award
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -211,10 +213,36 @@ export default function SamplePosts() {
               <ThumbsUp className={`h-4 w-4 mr-1 ${post.isLiked ? 'fill-primary' : ''}`} />
               Like
             </Button>
-            <Button variant="ghost" size="sm" className="flex-1">
-              <MessageSquare className="h-4 w-4 mr-1" />
-              Comment
-            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1">
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  Comment
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Comments</DialogTitle>
+                </DialogHeader>
+                <div className="mt-4 space-y-4">
+                  <Textarea 
+                    placeholder="Write a comment..." 
+                    className="min-h-[100px]" 
+                  />
+                  <Button 
+                    className="w-full"
+                    onClick={() => {
+                      toast({
+                        title: "Comment posted",
+                        description: "Your comment has been posted successfully",
+                      });
+                    }}
+                  >
+                    Post Comment
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button 
               variant="ghost" 
               size="sm" 

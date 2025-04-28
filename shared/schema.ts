@@ -17,9 +17,31 @@ export type UserRoleType = typeof UserRole[keyof typeof UserRole];
 export const PitchStatus = {
   IDEA: "idea",
   REGISTERED: "registered",
+  FUNDED: "funded",
+  ACQUIRED: "acquired",
 } as const;
 
 export type PitchStatusType = typeof PitchStatus[keyof typeof PitchStatus];
+
+// Job types
+export const JobType = {
+  FULL_TIME: "full-time",
+  PART_TIME: "part-time",
+  CONTRACT: "contract",
+  INTERNSHIP: "internship",
+  FREELANCE: "freelance",
+} as const;
+
+export type JobTypeType = typeof JobType[keyof typeof JobType];
+
+// Job locations
+export const JobLocation = {
+  REMOTE: "remote",
+  HYBRID: "hybrid",
+  ON_SITE: "on-site",
+} as const;
+
+export type JobLocationType = typeof JobLocation[keyof typeof JobLocation];
 
 // Users table
 export const users = pgTable("users", {
@@ -73,6 +95,25 @@ export const experiences = pgTable("experiences", {
   current: boolean("current").default(false),
 });
 
+// Jobs table
+export const jobs = pgTable("jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  company: text("company").notNull(),
+  location: text("location").notNull(),
+  locationType: text("location_type").$type<JobLocationType>().notNull(),
+  jobType: text("job_type").$type<JobTypeType>().notNull(),
+  description: text("description").notNull(),
+  responsibilities: text("responsibilities"),
+  requirements: text("requirements"),
+  salary: text("salary"),
+  applicationLink: text("application_link"),
+  logo: text("logo"),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true, profileCompleted: true });
@@ -86,6 +127,9 @@ export const insertPitchSchema = createInsertSchema(pitches)
 export const insertExperienceSchema = createInsertSchema(experiences)
   .omit({ id: true });
 
+export const insertJobSchema = createInsertSchema(jobs)
+  .omit({ id: true, createdAt: true });
+
 // Define types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -98,3 +142,6 @@ export type Pitch = typeof pitches.$inferSelect;
 
 export type InsertExperience = z.infer<typeof insertExperienceSchema>;
 export type Experience = typeof experiences.$inferSelect;
+
+export type InsertJob = z.infer<typeof insertJobSchema>;
+export type Job = typeof jobs.$inferSelect;

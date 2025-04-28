@@ -1,4 +1,4 @@
-import { users, type User, type InsertUser, posts, type Post, type InsertPost, pitches, type Pitch, type InsertPitch, experiences, type Experience, type InsertExperience } from "@shared/schema";
+import { users, type User, type InsertUser, posts, type Post, type InsertPost, pitches, type Pitch, type InsertPitch, experiences, type Experience, type InsertExperience, jobs, type Job, type InsertJob } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import connectPg from "connect-pg-simple";
@@ -30,6 +30,13 @@ export interface IStorage {
   createExperience(experience: InsertExperience): Promise<Experience>;
   getExperiencesByUserId(userId: number): Promise<Experience[]>;
 
+  // Job operations
+  createJob(job: InsertJob): Promise<Job>;
+  getJobs(): Promise<Job[]>;
+  getJobsByUserId(userId: number): Promise<Job[]>;
+  getJobsByType(jobType: string): Promise<Job[]>;
+  getJobById(id: number): Promise<Job | undefined>;
+
   // Session store
   sessionStore: session.SessionStore;
 }
@@ -39,21 +46,25 @@ export class MemStorage implements IStorage {
   private posts: Map<number, Post>;
   private pitches: Map<number, Pitch>;
   private experiences: Map<number, Experience>;
+  private jobs: Map<number, Job>;
   sessionStore: session.SessionStore;
   currentUserId: number;
   currentPostId: number;
   currentPitchId: number;
   currentExperienceId: number;
+  currentJobId: number;
 
   constructor() {
     this.users = new Map();
     this.posts = new Map();
     this.pitches = new Map();
     this.experiences = new Map();
+    this.jobs = new Map();
     this.currentUserId = 1;
     this.currentPostId = 1;
     this.currentPitchId = 1;
     this.currentExperienceId = 1;
+    this.currentJobId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -157,6 +168,36 @@ export class MemStorage implements IStorage {
         if (!a.current && b.current) return 1;
         return 0;
       });
+  }
+
+  // Job methods
+  async createJob(insertJob: InsertJob): Promise<Job> {
+    const id = this.currentJobId++;
+    const timestamp = new Date();
+    const job: Job = { ...insertJob, id, createdAt: timestamp };
+    this.jobs.set(id, job);
+    return job;
+  }
+
+  async getJobs(): Promise<Job[]> {
+    return Array.from(this.jobs.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getJobsByUserId(userId: number): Promise<Job[]> {
+    return Array.from(this.jobs.values())
+      .filter(job => job.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getJobsByType(jobType: string): Promise<Job[]> {
+    return Array.from(this.jobs.values())
+      .filter(job => job.jobType === jobType)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getJobById(id: number): Promise<Job | undefined> {
+    return this.jobs.get(id);
   }
 }
 

@@ -56,12 +56,12 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
               key={item.id}
               href={item.path}
             >
-              <a className="flex flex-col items-center">
+              <div className="flex flex-col items-center cursor-pointer">
                 <item.icon className={`${isActive ? 'text-primary' : 'text-gray-500'}`} />
                 <span className={`text-xs mt-1 ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
                   {item.name}
                 </span>
-              </a>
+              </div>
             </Link>
           );
         })}

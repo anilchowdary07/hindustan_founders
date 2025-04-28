@@ -59,13 +59,13 @@ export default function Header() {
           
           <div className="hidden md:flex ml-8 space-x-6">
             <Link href="/">
-              <a className="text-white hover:text-blue-200">Home</a>
+              <div className="text-white hover:text-blue-200 cursor-pointer">Home</div>
             </Link>
             <Link href="/jobs">
-              <a className="text-white hover:text-blue-200">Jobs</a>
+              <div className="text-white hover:text-blue-200 cursor-pointer">Jobs</div>
             </Link>
             <Link href="/pitch-room">
-              <a className="text-white hover:text-blue-200">Pitch Room</a>
+              <div className="text-white hover:text-blue-200 cursor-pointer">Pitch Room</div>
             </Link>
           </div>
         </div>

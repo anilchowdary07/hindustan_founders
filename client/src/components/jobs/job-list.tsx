@@ -97,7 +97,7 @@ export default function JobList() {
               <SelectValue placeholder="Filter by Job Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               <SelectItem value={JobType.FULL_TIME}>Full Time</SelectItem>
               <SelectItem value={JobType.PART_TIME}>Part Time</SelectItem>
               <SelectItem value={JobType.CONTRACT}>Contract</SelectItem>
@@ -116,7 +116,7 @@ export default function JobList() {
               <SelectValue placeholder="Filter by Location Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Locations</SelectItem>
+              <SelectItem value="all">All Locations</SelectItem>
               <SelectItem value={JobLocation.REMOTE}>Remote</SelectItem>
               <SelectItem value={JobLocation.HYBRID}>Hybrid</SelectItem>
               <SelectItem value={JobLocation.ON_SITE}>On-site</SelectItem>

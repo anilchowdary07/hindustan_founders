@@ -42,10 +42,10 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       id: "messages"
     },
     {
-      name: "Notify",
-      path: "/notifications",
-      icon: Bell,
-      id: "notifications"
+      name: "Pitch",
+      path: "/pitch-room",
+      icon: DoorOpen,
+      id: "pitch"
     }
   ];
 

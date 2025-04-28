@@ -27,7 +27,7 @@ import {
 export default function Header() {
   const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
-  
+
   if (!user) return null;
 
   // Get user initials for avatar fallback
@@ -44,7 +44,7 @@ export default function Header() {
   const handleLogout = () => {
     logoutMutation.mutate();
   };
-  
+
   return (
     <header className="bg-primary text-white p-4 shadow-md sticky top-0 z-10">
       <div className="container mx-auto flex items-center justify-between">
@@ -58,7 +58,7 @@ export default function Header() {
               <h1 className="hidden md:block ml-2 font-bold">Hindustan Founders</h1>
             </div>
           </Link>
-          
+
           <div className="hidden md:flex ml-8 space-x-6">
             <Link href="/">
               <div className="text-white hover:text-blue-200 cursor-pointer">Home</div>
@@ -74,7 +74,7 @@ export default function Header() {
             </Link>
           </div>
         </div>
-        
+
         <div className="flex-1 max-w-md mx-4">
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
@@ -86,19 +86,24 @@ export default function Header() {
             />
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-5">
           <ThemeToggle />
-          
+
           <Button 
             variant="ghost" 
             size="icon" 
-            className="hidden md:flex text-white hover:bg-primary/90"
+            className="text-white hover:bg-primary/90"
             onClick={() => navigate("/notifications")}
           >
-            <Bell size={20} />
+            <div className="relative">
+              <Bell size={20} />
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white">
+                2
+              </span>
+            </div>
           </Button>
-          
+
           <Button 
             variant="ghost" 
             size="icon" 
@@ -108,15 +113,6 @@ export default function Header() {
             <MessageCircle size={20} />
           </Button>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="hidden md:flex text-white hover:bg-primary/90"
-            onClick={() => navigate("/notifications")}
-          >
-            <Bell size={20} />
-          </Button>
-          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="p-1 h-auto">

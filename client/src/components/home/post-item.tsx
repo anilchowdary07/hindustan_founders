@@ -123,11 +123,36 @@ export default function PostItem({ post }: PostItemProps) {
           <ThumbsUp className="mr-1 h-4 w-4" />
           <span>Like</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center text-gray-600">
-          <MessageSquare className="mr-1 h-4 w-4" />
-          <span>Comment</span>
-        </Button>
-        <Button variant="ghost" size="sm" className="flex items-center text-gray-600">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="flex items-center text-gray-600">
+              <MessageSquare className="mr-1 h-4 w-4" />
+              <span>Comment</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Comments</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea placeholder="Write a comment..." />
+              <Button className="w-full">Post Comment</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex items-center text-gray-600"
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href);
+            toast({
+              title: "Link copied!",
+              description: "Post link has been copied to clipboard",
+            });
+          }}
+        >
           <Share2 className="mr-1 h-4 w-4" />
           <span>Share</span>
         </Button>

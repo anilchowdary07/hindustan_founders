@@ -226,6 +226,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users
+  app.get("/api/users", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const users = await storage.getUsers();
+      
+      // Remove sensitive information like passwords
+      const sanitizedUsers = users.map(user => ({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        title: user.title,
+        company: user.company,
+        location: user.location,
+        bio: user.bio,
+        isVerified: user.isVerified,
+        avatarUrl: user.avatarUrl,
+        profileCompleted: user.profileCompleted,
+        createdAt: user.createdAt
+      }));
+      
+      res.json(sanitizedUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users", error });
+    }
+  });
+
+  // Get user by ID
+  app.get("/api/users/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove sensitive information
+      const sanitizedUser = {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        title: user.title,
+        company: user.company,
+        location: user.location,
+        bio: user.bio,
+        isVerified: user.isVerified,
+        avatarUrl: user.avatarUrl,
+        profileCompleted: user.profileCompleted,
+        createdAt: user.createdAt
+      };
+      
+      res.json(sanitizedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user", error });
+    }
+  });
+
   // Update user profile
   app.patch("/api/users/:userId", async (req, res) => {
     try {
@@ -244,6 +309,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: "Invalid user data", error });
     }
+  });
+  
+  // Connection routes - placeholder for future implementation
+  app.get("/api/connections", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    // For now, return empty array as this feature is not fully implemented
+    res.json([]);
+  });
+  
+  app.get("/api/connections/requests", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    // For now, return empty array as this feature is not fully implemented
+    res.json([]);
   });
 
   // Job routes

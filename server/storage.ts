@@ -7,6 +7,25 @@ import { eq, desc } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 
+// Helper function to add timeout to database queries
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 5000, fallback: T | null = null): Promise<T> {
+  try {
+    // Create a promise that will reject after a timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);
+    });
+
+    // Race the query against the timeout
+    return await Promise.race([promise, timeoutPromise]);
+  } catch (error) {
+    console.error("Operation failed or timed out:", error);
+    if (fallback !== null) {
+      return fallback as T;
+    }
+    throw error;
+  }
+}
+
 const MemoryStore = createMemoryStore(session);
 const PostgresSessionStore = connectPg(session);
 
@@ -346,8 +365,8 @@ export class DatabaseStorage implements IStorage {
 
   async getPosts(): Promise<any[]> {
     try {
-      // Join posts with users to get user information
-      const result = await db
+      // Create the query
+      const query = db
         .select({
           post: posts,
           user: {
@@ -363,7 +382,11 @@ export class DatabaseStorage implements IStorage {
         })
         .from(posts)
         .leftJoin(users, eq(posts.userId, users.id))
-        .orderBy(desc(posts.createdAt));
+        .orderBy(desc(posts.createdAt))
+        .limit(20); // Limit to 20 most recent posts for performance
+      
+      // Use our timeout helper
+      const result = await withTimeout(query, 5000, []);
       
       // Transform the result to match the expected format
       return result.map(item => ({
@@ -372,14 +395,14 @@ export class DatabaseStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error fetching posts:", error);
-      throw error;
+      return [];
     }
   }
 
   async getPostsByUserId(userId: number): Promise<any[]> {
     try {
-      // Join posts with users to get user information
-      const result = await db
+      // Create the query
+      const query = db
         .select({
           post: posts,
           user: {
@@ -396,7 +419,11 @@ export class DatabaseStorage implements IStorage {
         .from(posts)
         .leftJoin(users, eq(posts.userId, users.id))
         .where(eq(posts.userId, userId))
-        .orderBy(desc(posts.createdAt));
+        .orderBy(desc(posts.createdAt))
+        .limit(20); // Limit to 20 most recent posts for performance
+      
+      // Use our timeout helper
+      const result = await withTimeout(query, 5000, []);
       
       // Transform the result to match the expected format
       return result.map(item => ({
@@ -405,7 +432,7 @@ export class DatabaseStorage implements IStorage {
       }));
     } catch (error) {
       console.error(`Error fetching posts for user ${userId}:`, error);
-      throw error;
+      return [];
     }
   }
 
@@ -419,26 +446,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPitches(): Promise<Pitch[]> {
-    return await db
-      .select()
-      .from(pitches)
-      .orderBy(desc(pitches.createdAt));
+    try {
+      const query = db
+        .select()
+        .from(pitches)
+        .orderBy(desc(pitches.createdAt))
+        .limit(20); // Limit to 20 most recent pitches for performance
+      
+      // Use our timeout helper
+      return await withTimeout(query, 5000, []);
+    } catch (error) {
+      console.error("Error fetching pitches:", error);
+      return [];
+    }
   }
 
   async getPitchesByUserId(userId: number): Promise<Pitch[]> {
-    return await db
-      .select()
-      .from(pitches)
-      .where(eq(pitches.userId, userId))
-      .orderBy(desc(pitches.createdAt));
+    try {
+      const query = db
+        .select()
+        .from(pitches)
+        .where(eq(pitches.userId, userId))
+        .orderBy(desc(pitches.createdAt))
+        .limit(20); // Limit to 20 most recent pitches for performance
+      
+      // Use our timeout helper
+      return await withTimeout(query, 5000, []);
+    } catch (error) {
+      console.error(`Error fetching pitches for user ${userId}:`, error);
+      return [];
+    }
   }
 
   async getPitchesByStatus(status: string): Promise<Pitch[]> {
-    return await db
-      .select()
-      .from(pitches)
-      .where(eq(pitches.status, status))
-      .orderBy(desc(pitches.createdAt));
+    try {
+      const query = db
+        .select()
+        .from(pitches)
+        .where(eq(pitches.status, status))
+        .orderBy(desc(pitches.createdAt))
+        .limit(20); // Limit to 20 most recent pitches for performance
+      
+      // Use our timeout helper
+      return await withTimeout(query, 5000, []);
+    } catch (error) {
+      console.error(`Error fetching pitches with status ${status}:`, error);
+      return [];
+    }
   }
 
   // Experience methods

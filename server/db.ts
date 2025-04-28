@@ -24,8 +24,8 @@ const connectionString = process.env.DATABASE_URL ||
 // Create connection pool with appropriate settings for serverless
 const poolConfig = {
   connectionString,
-  max: 5, // Reduced for serverless
-  idleTimeoutMillis: 30000,
+  max: 1, // Minimal connections for serverless
+  idleTimeoutMillis: 15000, // Shorter idle timeout
   connectionTimeoutMillis: 5000,
 };
 
@@ -38,6 +38,9 @@ const initializeDb = async () => {
   
   try {
     console.log('Initializing database connection...');
+    
+    // In serverless environments, we want to create the pool but not test it immediately
+    // This defers the actual connection until the first query
     pool = new Pool(poolConfig);
     
     // Add error handler
@@ -49,17 +52,21 @@ const initializeDb = async () => {
       }
     });
     
-    // Test the connection
-    try {
-      const result = await pool.query('SELECT NOW()');
-      console.log('Database connected successfully at:', result.rows[0].now);
-      dbInitialized = true;
-    } catch (testError) {
-      console.error('Database connection test failed:', testError);
-      throw testError;
+    // Only test the connection in development mode
+    if (process.env.NODE_ENV === 'development' && process.env.VERCEL !== '1') {
+      try {
+        const result = await pool.query('SELECT NOW()');
+        console.log('Database connected successfully at:', result.rows[0].now);
+      } catch (testError) {
+        console.error('Database connection test failed:', testError);
+        throw testError;
+      }
     }
+    
+    dbInitialized = true;
   } catch (error) {
     console.error('Failed to create database pool:', error);
+    
     // Create a dummy pool for fallback
     pool = new Pool({
       connectionString: 'postgresql://dummy:dummy@localhost:5432/dummy',

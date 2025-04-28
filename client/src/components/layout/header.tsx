@@ -79,7 +79,7 @@ export default function Header() {
               <Search className="h-4 w-4 text-gray-400" />
             </span>
             <Input 
-              className="w-full bg-blue-700 text-white rounded-md py-2 pl-10 pr-4 placeholder-gray-300"
+              className="w-full bg-white text-gray-800 rounded-md py-2 pl-10 pr-4 placeholder-gray-500"
               placeholder="Search" 
             />
           </div>

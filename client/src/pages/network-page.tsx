@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserRoleType } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 // Helper function to get role badge color
 const getRoleBadgeColor = (role: UserRoleType) => {
@@ -48,6 +49,7 @@ const formatRoleText = (role: UserRoleType) => {
 export default function NetworkPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("people");
+  const { toast } = useToast();
 
   // Fetch all users
   const { data: users, isLoading } = useQuery({
@@ -114,7 +116,10 @@ export default function NetworkPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button className="ml-2">Filter</Button>
+          <Button className="ml-2" onClick={() => toast({
+            title: "Filters applied",
+            description: "Your search filters have been applied",
+          })}>Filter</Button>
         </div>
 
         <Tabs defaultValue="people" className="space-y-4" onValueChange={setActiveTab}>
@@ -174,7 +179,17 @@ export default function NetworkPage() {
                             {user.location}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" className="flex items-center gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex items-center gap-1"
+                          onClick={() => {
+                            toast({
+                              title: "Connection request sent",
+                              description: `Request sent to ${user.name}`,
+                            });
+                          }}
+                        >
                           <UserPlus className="h-4 w-4" />
                           Connect
                         </Button>
@@ -238,7 +253,18 @@ export default function NetworkPage() {
                             Connected since {new Date(connection.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            toast({
+                              title: "Connection removed",
+                              description: `Connection with ${connection.user.name} has been removed`,
+                              variant: "destructive"
+                            });
+                          }}
+                        >
                           Remove
                         </Button>
                       </div>
@@ -300,10 +326,31 @@ export default function NetworkPage() {
                           </p>
                         </div>
                         <div className="space-x-2">
-                          <Button size="sm" variant="outline" className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-200">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-200"
+                            onClick={() => {
+                              toast({
+                                title: "Connection accepted",
+                                description: `You are now connected with ${request.user.name}`,
+                              });
+                            }}
+                          >
                             <Check className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-200">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-200"
+                            onClick={() => {
+                              toast({
+                                title: "Request declined",
+                                description: `Connection request from ${request.user.name} has been declined`,
+                                variant: "destructive"
+                              });
+                            }}
+                          >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>

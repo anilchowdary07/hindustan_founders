@@ -1,8 +1,12 @@
 import { users, type User, type InsertUser, posts, type Post, type InsertPost, pitches, type Pitch, type InsertPitch, experiences, type Experience, type InsertExperience } from "@shared/schema";
-import session from "express-session";
+import * as session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db, pool } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User operations
@@ -156,4 +160,121 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.SessionStore;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool,
+      createTableIfMissing: true
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
+        profileCompleted: 20,
+        isVerified: false
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  // Post methods
+  async createPost(insertPost: InsertPost): Promise<Post> {
+    const [post] = await db
+      .insert(posts)
+      .values(insertPost)
+      .returning();
+    return post;
+  }
+
+  async getPosts(): Promise<Post[]> {
+    return await db
+      .select()
+      .from(posts)
+      .orderBy(desc(posts.createdAt));
+  }
+
+  async getPostsByUserId(userId: number): Promise<Post[]> {
+    return await db
+      .select()
+      .from(posts)
+      .where(eq(posts.userId, userId))
+      .orderBy(desc(posts.createdAt));
+  }
+
+  // Pitch methods
+  async createPitch(insertPitch: InsertPitch): Promise<Pitch> {
+    const [pitch] = await db
+      .insert(pitches)
+      .values(insertPitch)
+      .returning();
+    return pitch;
+  }
+
+  async getPitches(): Promise<Pitch[]> {
+    return await db
+      .select()
+      .from(pitches)
+      .orderBy(desc(pitches.createdAt));
+  }
+
+  async getPitchesByUserId(userId: number): Promise<Pitch[]> {
+    return await db
+      .select()
+      .from(pitches)
+      .where(eq(pitches.userId, userId))
+      .orderBy(desc(pitches.createdAt));
+  }
+
+  async getPitchesByStatus(status: string): Promise<Pitch[]> {
+    return await db
+      .select()
+      .from(pitches)
+      .where(eq(pitches.status, status))
+      .orderBy(desc(pitches.createdAt));
+  }
+
+  // Experience methods
+  async createExperience(insertExperience: InsertExperience): Promise<Experience> {
+    const [experience] = await db
+      .insert(experiences)
+      .values(insertExperience)
+      .returning();
+    return experience;
+  }
+
+  async getExperiencesByUserId(userId: number): Promise<Experience[]> {
+    return await db
+      .select()
+      .from(experiences)
+      .where(eq(experiences.userId, userId))
+      .orderBy(desc(experiences.current));
+  }
+}
+
+// Use database storage
+export const storage = new DatabaseStorage();

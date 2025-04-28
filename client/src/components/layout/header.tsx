@@ -48,13 +48,13 @@ export default function Header() {
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
           <Link href="/">
-            <a className="flex items-center">
+            <div className="flex items-center cursor-pointer">
               <div className="bg-white bg-opacity-20 rounded-md p-1">
                 <LeafIcon className="h-6 w-6 text-white" />
               </div>
               <span className="font-bold text-lg ml-1">HF</span>
               <h1 className="hidden md:block ml-2 font-bold">Hindustan Founders</h1>
-            </a>
+            </div>
           </Link>
         </div>
         

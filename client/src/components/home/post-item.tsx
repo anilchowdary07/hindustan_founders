@@ -50,20 +50,18 @@ export default function PostItem({ post }: PostItemProps) {
       <CardContent className="p-4">
         <div className="flex items-start">
           <Link href={`/profile/${post.user.id}`}>
-            <a className="flex-shrink-0">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={post.user.avatarUrl || ""} />
-                <AvatarFallback className="bg-primary text-white">
-                  {getInitials(post.user.name)}
-                </AvatarFallback>
-              </Avatar>
-            </a>
+            <Avatar className="h-12 w-12 cursor-pointer flex-shrink-0">
+              <AvatarImage src={post.user.avatarUrl || ""} />
+              <AvatarFallback className="bg-primary text-white">
+                {getInitials(post.user.name)}
+              </AvatarFallback>
+            </Avatar>
           </Link>
           
           <div className="ml-3">
             <div className="flex items-center">
               <Link href={`/profile/${post.user.id}`}>
-                <a className="font-medium hover:underline">{post.user.name}</a>
+                <span className="font-medium hover:underline cursor-pointer">{post.user.name}</span>
               </Link>
               <span className="text-primary ml-1 text-sm">• {getRoleDisplay(post.user.role)}</span>
               {post.user.isVerified && (

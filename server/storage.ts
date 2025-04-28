@@ -220,29 +220,67 @@ export class DatabaseStorage implements IStorage {
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error(`Error getting user with ID ${id}:`, error);
+      throw error;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    try {
+      if (!username) {
+        console.error("getUserByUsername called with empty username");
+        return undefined;
+      }
+      
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error(`Error getting user by username "${username}":`, error);
+      throw error;
+    }
   }
   
   async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    try {
+      return await db.select().from(users);
+    } catch (error) {
+      console.error("Error getting all users:", error);
+      throw error;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...insertUser,
-        profileCompleted: 20,
-        isVerified: false
-      })
-      .returning();
-    return user;
+    try {
+      // Validate required fields
+      if (!insertUser.username || !insertUser.password || !insertUser.name || !insertUser.email || !insertUser.role) {
+        throw new Error("Missing required user fields");
+      }
+      
+      console.log("Creating user with username:", insertUser.username);
+      
+      const [user] = await db
+        .insert(users)
+        .values({
+          ...insertUser,
+          profileCompleted: 20,
+          isVerified: false
+        })
+        .returning();
+        
+      if (!user) {
+        throw new Error("User creation failed - no user returned");
+      }
+      
+      console.log("User created successfully with ID:", user.id);
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
+    }
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {

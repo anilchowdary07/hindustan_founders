@@ -33,22 +33,47 @@ export function setupAuth(app: Express) {
   const isProduction = process.env.NODE_ENV === 'production';
   const isVercel = process.env.VERCEL === '1';
   
+  // If we're in a serverless environment and session middleware is already set up, skip
+  if (isVercel && app.get('session-initialized')) {
+    console.log('Session already initialized, skipping...');
+    return;
+  }
+  
+  // Create memory store for serverless environments
+  const sessionStore = isVercel 
+    ? new (createMemoryStore(session))({
+        checkPeriod: 86400000, // 24 hours
+      })
+    : storage.sessionStore;
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "hindustan-founders-secret",
     resave: false,
     saveUninitialized: false,
-    store: isVercel ? new (createMemoryStore(session))() : storage.sessionStore,
+    store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax'
+      secure: false, // Set to true if using HTTPS
+      sameSite: 'lax'
     }
   };
 
+  // Mark session as initialized to prevent duplicate initialization
+  app.set('session-initialized', true);
   app.set("trust proxy", 1);
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
+  
+  // Only set up session if not already set up
+  if (!app.get('session-middleware-applied')) {
+    app.use(session(sessionSettings));
+    app.set('session-middleware-applied', true);
+  }
+  
+  // Initialize passport if not already initialized
+  if (!app.get('passport-initialized')) {
+    app.use(passport.initialize());
+    app.use(passport.session());
+    app.set('passport-initialized', true);
+  }
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -69,27 +94,77 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+      console.log("Registration attempt for username:", req.body.username);
+      
+      // Validate required fields first
+      if (!req.body.username || !req.body.password || !req.body.name || !req.body.email || !req.body.role) {
+        console.log("Missing required fields in registration data");
+        return res.status(400).json({ 
+          message: "Missing required fields", 
+          details: "Username, password, name, email, and role are required" 
+        });
+      }
+      
+      try {
+        // Check if username already exists
+        const existingUser = await storage.getUserByUsername(req.body.username);
+        if (existingUser) {
+          console.log("Username already exists:", req.body.username);
+          return res.status(400).json({ message: "Username already exists" });
+        }
+      } catch (dbError) {
+        console.error("Database error checking existing user:", dbError);
+        return res.status(500).json({ 
+          message: "Error checking username availability", 
+          error: process.env.NODE_ENV === 'development' ? dbError.message : undefined 
+        });
       }
 
-      const validatedData = insertUserSchema.parse(req.body);
+      // Validate data against schema
+      let validatedData;
+      try {
+        validatedData = insertUserSchema.parse(req.body);
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        return res.status(400).json({ 
+          message: "Invalid registration data", 
+          error: validationError 
+        });
+      }
       
-      const user = await storage.createUser({
-        ...validatedData,
-        password: await hashPassword(validatedData.password),
-      });
+      // Hash password and create user
+      try {
+        const hashedPassword = await hashPassword(validatedData.password);
+        const user = await storage.createUser({
+          ...validatedData,
+          password: hashedPassword,
+        });
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
+        // Remove password from response
+        const { password, ...userWithoutPassword } = user;
 
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(userWithoutPassword);
-      });
+        // Log the user in
+        req.login(user, (err) => {
+          if (err) {
+            console.error("Login error after registration:", err);
+            return next(err);
+          }
+          console.log("User registered successfully:", user.id);
+          res.status(201).json(userWithoutPassword);
+        });
+      } catch (createError) {
+        console.error("Error creating user:", createError);
+        return res.status(500).json({ 
+          message: "Failed to create user account", 
+          error: process.env.NODE_ENV === 'development' ? createError.message : undefined 
+        });
+      }
     } catch (error) {
-      res.status(400).json({ message: "Invalid registration data", error });
+      console.error("Unexpected error in registration:", error);
+      res.status(500).json({ 
+        message: "Registration failed", 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+      });
     }
   });
 

@@ -1,0 +1,36 @@
+Create a comprehensive technical document for building "Hindustan Founders," a professional networking platform similar to LinkedIn, with a focus on matching specific professional roles and facilitating interaction through pitches and direct communication.
+
+The document should include:
+
+1. **Core Tech Stack Specifications:**
+   - Frontend development with React.js, TypeScript, Vite, and TailwindCSS.
+   - Backend infrastructure using Node.js and Express.js.
+   - Database management with MongoDB, utilizing Mongoose for data modeling.
+   - User authentication managed via JSON Web Tokens (JWT).
+   - Real-time communication enabled by Socket.io.
+
+2. **Feature Breakdown:**
+   - **Authentication System:** JWT-based signup/login, user session management, error messaging for authentication failures.
+   - **Role Selection and Verification:** After signup, allow users to choose their professional role; include an "Apply for Verification" feature that logs requests for admin review.
+   - **User Interface Components:**
+     * LinkedIn-style login and home page design, with responsive adjustments for navigation and interaction.
+     * A feed of posts and a navigational structure incorporating Home, Pitch Room, Chat, and Profile.
+   - **Pitch Room Functionality:** Users may submit and upvote pitches. Include mechanisms for investors to express interest.
+   - **User Profiles:** Enhanced profiles with role-specific titles and sections like Skills, Experience, and Education.
+   - **Post Features:** Support text and image uploads, along with engagement tools like commenting, liking, sharing, and hashtag utilization.
+   - **Real-time Chat:** Implement direct messaging with presence indicators using Socket.io.
+   - **Verification System:** Admin-managed user verification, with the addition of a verification badge.
+   - **Admin Panel:** Comprehensive user and content management, including verification processing and user moderation.
+
+3. **Non-functional Requirements:**
+   - Prioritize responsive design and seamless user experience across devices.
+   - Focus on security measures for authentication and data handling; recommend possible use of Cloudinary or MongoDB GridFS for image uploads.
+   - Integrate real-time features for refresh-free updates in chat and feed posts, and a toggle-able dark mode.
+   - Establish a notification system for messaging updates and verification status.
+   - Considerations for sharing features and job listing capabilities within the community.
+
+4. **Architectural Considerations:**
+   - Discuss potential challenges in implementing real-time features and ensuring platform scalability.
+   - Provide strategies for integration between frontend and backend systems, and handling data persistence in MongoDB.
+  
+Conclude with insights for advancing the platform's unique proposition as a connector for professionals, especially focusing on fostering startup culture through features like pitch submissions and role-based interactions.

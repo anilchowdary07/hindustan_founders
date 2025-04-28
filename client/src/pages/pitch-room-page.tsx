@@ -1,14 +1,30 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import Layout from "@/components/layout/layout";
 import PitchItem from "@/components/pitch/pitch-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PitchStatus, PitchStatusType } from "@shared/schema";
-import { Bell } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PitchRoomPage() {
   const [activeTab, setActiveTab] = useState<PitchStatusType>(PitchStatus.IDEA);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [pitchData, setPitchData] = useState({
+    name: "",
+    description: "",
+    location: "",
+    category: "",
+    status: PitchStatus.IDEA as PitchStatusType,
+  });
+  const { toast } = useToast();
   
   const { 
     data: pitches, 
@@ -17,6 +33,48 @@ export default function PitchRoomPage() {
   } = useQuery({
     queryKey: ["/api/pitches", { status: activeTab }],
   });
+  
+  const createPitchMutation = useMutation({
+    mutationFn: async (data: typeof pitchData) => {
+      const res = await apiRequest("POST", "/api/pitches", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Your pitch has been created successfully",
+      });
+      setIsDialogOpen(false);
+      setPitchData({
+        name: "",
+        description: "",
+        location: "",
+        category: "",
+        status: PitchStatus.IDEA,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pitches"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create pitch: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handlePitchSubmit = () => {
+    if (!pitchData.name || !pitchData.description) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill out all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createPitchMutation.mutate(pitchData);
+  };
 
   const renderPitches = () => {
     if (isLoading) {
@@ -83,12 +141,104 @@ export default function PitchRoomPage() {
         >
           Registered
         </Button>
-        <Button 
-          variant="outline"
-          className="rounded-full"
-        >
-          Pitch yours
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline"
+              className="rounded-full"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Pitch yours
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create a New Pitch</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="pitch-name">Pitch Name*</Label>
+                <Input 
+                  id="pitch-name" 
+                  value={pitchData.name}
+                  onChange={(e) => setPitchData({...pitchData, name: e.target.value})}
+                  placeholder="Your startup name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pitch-description">Description*</Label>
+                <Textarea 
+                  id="pitch-description" 
+                  value={pitchData.description}
+                  onChange={(e) => setPitchData({...pitchData, description: e.target.value})}
+                  placeholder="Brief description of your idea"
+                  rows={3}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pitch-category">Category</Label>
+                <Select 
+                  value={pitchData.category} 
+                  onValueChange={(value) => setPitchData({...pitchData, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="E-commerce">E-commerce</SelectItem>
+                    <SelectItem value="FinTech">FinTech</SelectItem>
+                    <SelectItem value="EdTech">EdTech</SelectItem>
+                    <SelectItem value="HealthTech">HealthTech</SelectItem>
+                    <SelectItem value="SaaS">SaaS</SelectItem>
+                    <SelectItem value="AI">AI/ML</SelectItem>
+                    <SelectItem value="AgriTech">AgriTech</SelectItem>
+                    <SelectItem value="Logistics">Logistics</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pitch-location">Location</Label>
+                <Input 
+                  id="pitch-location" 
+                  value={pitchData.location}
+                  onChange={(e) => setPitchData({...pitchData, location: e.target.value})}
+                  placeholder="e.g. Bangalore, Delhi, Remote"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pitch-status">Status</Label>
+                <Select 
+                  value={pitchData.status} 
+                  onValueChange={(value: PitchStatusType) => setPitchData({...pitchData, status: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={PitchStatus.IDEA}>Idea Stage</SelectItem>
+                    <SelectItem value={PitchStatus.REGISTERED}>Registered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                onClick={handlePitchSubmit}
+                disabled={createPitchMutation.isPending}
+              >
+                {createPitchMutation.isPending ? 
+                  <div className="flex items-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </div> 
+                  : 'Create Pitch'
+                }
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       
       {/* Alert Section */}

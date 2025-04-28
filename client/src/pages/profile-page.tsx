@@ -1,19 +1,37 @@
-import { useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import Layout from "@/components/layout/layout";
 import ProfileHeader from "@/components/profile/profile-header";
 import ExperienceItem from "@/components/profile/experience-item";
 import ActivityItem from "@/components/profile/activity-item";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const params = useParams();
   const profileId = params.id ? parseInt(params.id) : user?.id;
+  const { toast } = useToast();
+  
+  const [isExperienceDialogOpen, setIsExperienceDialogOpen] = useState(false);
+  const [experienceData, setExperienceData] = useState({
+    title: "",
+    company: "",
+    location: "",
+    startDate: "",
+    endDate: "",
+    current: false,
+    description: "",
+  });
   
   const isCurrentUser = user?.id === profileId;
   

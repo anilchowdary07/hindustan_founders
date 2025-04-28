@@ -4,7 +4,7 @@ import JobDetail from "@/components/jobs/job-detail";
 export default function JobDetailPage() {
   return (
     <Layout>
-      <div className="container mx-auto py-8 px-4">
+      <div className="container max-w-6xl mx-auto py-6 px-4">
         <JobDetail />
       </div>
     </Layout>

@@ -1,9 +1,11 @@
-import { JobTypeType, JobLocationType } from "@shared/schema";
-import { formatDistanceToNow } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Building2, MapPin, CalendarDays, Clock } from "lucide-react";
 import { Link } from "wouter";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Briefcase, MapPin, CalendarDays, ExternalLink } from "lucide-react";
+import { JobLocationType, JobTypeType } from "@shared/schema";
+import { format, formatDistanceToNow } from "date-fns";
 
 interface JobItemProps {
   job: {
@@ -25,99 +27,116 @@ interface JobItemProps {
   };
 }
 
-// Function to determine job type badge color
 const getJobTypeColor = (jobType: JobTypeType) => {
   switch (jobType) {
     case "FULL_TIME":
-      return "green";
+      return "bg-green-100 text-green-800";
     case "PART_TIME":
-      return "blue";
+      return "bg-blue-100 text-blue-800";
     case "CONTRACT":
-      return "orange";
+      return "bg-orange-100 text-orange-800";
     case "INTERNSHIP":
-      return "purple";
+      return "bg-purple-100 text-purple-800";
     case "FREELANCE":
-      return "yellow";
+      return "bg-yellow-100 text-yellow-800";
     default:
-      return "gray";
+      return "bg-gray-100 text-gray-800";
   }
 };
 
-// Function to format job type display
 const formatJobType = (jobType: JobTypeType) => {
-  return jobType.replace("_", " ").toLowerCase()
-    .split(" ")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  const formatted = jobType.replace("_", " ").toLowerCase();
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
 export default function JobItem({ job }: JobItemProps) {
-  // Format the date
-  const postedDate = job.createdAt ? formatDistanceToNow(new Date(job.createdAt), { addSuffix: true }) : "";
+  // Convert string date to Date object if needed
+  const createdAt = job.createdAt instanceof Date 
+    ? job.createdAt 
+    : new Date(job.createdAt);
   
   return (
-    <Card className="overflow-hidden border-border/40 hover:border-border/80 transition-all duration-200">
-      <Link href={`/jobs/${job.id}`}>
-        <a className="block">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-foreground mb-1">{job.title}</h3>
-                <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                  <Building2 className="h-4 w-4" />
-                  <span className="font-medium">{job.company}</span>
-                  {job.user?.isVerified && (
-                    <Badge variant="secondary" className="ml-1 py-0 px-1.5">Verified</Badge>
-                  )}
-                </div>
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-shrink-0">
+            {job.logo ? (
+              <img 
+                src={job.logo} 
+                alt={`${job.company} logo`} 
+                className="w-12 h-12 object-contain rounded"
+              />
+            ) : (
+              <Avatar className="w-12 h-12 bg-primary/10">
+                <AvatarFallback className="text-primary">
+                  {job.company.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
+          
+          <div className="flex-1 space-y-1">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <Link href={`/jobs/${job.id}`}>
+                <h3 className="text-lg font-semibold hover:text-primary cursor-pointer">
+                  {job.title}
+                </h3>
+              </Link>
+              
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className={getJobTypeColor(job.jobType)}>
+                  <Briefcase className="mr-1 h-3 w-3" />
+                  {formatJobType(job.jobType)}
+                </Badge>
                 
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <Badge variant={getJobTypeColor(job.jobType)} className="rounded-full">
-                    {formatJobType(job.jobType)}
+                {job.locationType && (
+                  <Badge variant="outline" className="bg-slate-100">
+                    <MapPin className="mr-1 h-3 w-3" />
+                    {job.locationType.charAt(0) + job.locationType.slice(1).toLowerCase()}
                   </Badge>
-                  
-                  <Badge variant="outline" className="rounded-full flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {job.locationType === "REMOTE" ? "Remote" : job.location}
-                  </Badge>
-                  
-                  {job.salary && (
-                    <Badge variant="outline" className="rounded-full">
-                      {job.salary}
-                    </Badge>
-                  )}
-                </div>
+                )}
               </div>
-              
-              {job.logo && (
-                <div className="h-14 w-14 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden ml-4">
-                  <img src={job.logo} alt={`${job.company} logo`} className="h-full w-full object-cover" />
-                </div>
-              )}
-              
-              {!job.logo && (
-                <div className="h-14 w-14 bg-primary/10 rounded-md flex items-center justify-center overflow-hidden ml-4">
-                  <Building2 className="h-7 w-7 text-primary/60" />
-                </div>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium">{job.company}</span>
+              {job.location && (
+                <span className="inline-flex items-center ml-2">
+                  <MapPin className="h-3 w-3 mr-1" /> {job.location}
+                </span>
               )}
             </div>
-          </CardContent>
-        </a>
-      </Link>
-      
-      <CardFooter className="bg-muted/20 px-6 py-3 border-t flex justify-between">
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          <span>Posted {postedDate}</span>
-        </div>
-        
-        {job.expiresAt && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5" />
-            <span>Apply by {new Date(job.expiresAt).toLocaleDateString()}</span>
+            
+            {job.salary && (
+              <div className="text-sm font-medium text-green-600">
+                {job.salary}
+              </div>
+            )}
+            
+            <div className="flex items-center text-xs text-muted-foreground pt-2">
+              <CalendarDays className="h-3 w-3 mr-1" />
+              <span>Posted {formatDistanceToNow(createdAt, { addSuffix: true })}</span>
+              
+              {job.expiresAt && (
+                <span className="ml-4">
+                  Expires on {format(
+                    job.expiresAt instanceof Date ? job.expiresAt : new Date(job.expiresAt),
+                    'MMM dd, yyyy'
+                  )}
+                </span>
+              )}
+            </div>
           </div>
-        )}
-      </CardFooter>
+          
+          <div className="flex flex-col justify-center gap-2 mt-4 md:mt-0">
+            <Link href={`/jobs/${job.id}`}>
+              <Button variant="outline" className="w-full md:w-auto">
+                View Details
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }

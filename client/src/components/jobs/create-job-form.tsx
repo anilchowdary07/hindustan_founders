@@ -1,23 +1,19 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { JobType, JobLocation, insertJobSchema } from "@shared/schema";
-
-import { Button } from "@/components/ui/button";
-import {
+import { 
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -33,24 +29,33 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { useLocation } from "wouter";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { insertJobSchema, JobType, JobLocation } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-// Extend job schema with custom validation
-const createJobSchema = insertJobSchema
-  .omit({ userId: true })
-  .extend({
-    expiresAt: z.date().optional(),
-  });
+// Extend the job schema with stronger validation
+const createJobSchema = insertJobSchema.extend({
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  company: z.string().min(2, "Company name is required"),
+  location: z.string().min(2, "Location is required"),
+  description: z.string().min(50, "Description must be at least 50 characters"),
+  locationType: z.string().min(1, "Location type is required"),
+  jobType: z.string().min(1, "Job type is required"),
+  salary: z.string().optional(),
+  responsibilities: z.string().optional(),
+  requirements: z.string().optional(),
+  applicationLink: z.string().url("Please enter a valid URL").optional(),
+  expiresAt: z.date().optional(),
+});
 
 type CreateJobValues = z.infer<typeof createJobSchema>;
 
 export default function CreateJobForm() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Initialize form with default values
+  
   const form = useForm<CreateJobValues>({
     resolver: zodResolver(createJobSchema),
     defaultValues: {
@@ -58,56 +63,42 @@ export default function CreateJobForm() {
       company: "",
       location: "",
       description: "",
+      locationType: JobLocation.REMOTE,
       jobType: JobType.FULL_TIME,
-      locationType: JobLocation.ONSITE,
+      salary: "",
       responsibilities: "",
       requirements: "",
-      salary: "",
-      applicationUrl: "",
-    },
+      applicationLink: ""
+    }
   });
-
-  const createJobMutation = useMutation({
+  
+  const mutation = useMutation({
     mutationFn: async (values: CreateJobValues) => {
-      const formattedValues = {
-        ...values,
-        expiresAt: values.expiresAt ? values.expiresAt.toISOString() : undefined,
-      };
-      
-      const res = await apiRequest("POST", "/api/jobs", formattedValues);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to create job posting");
-      }
-      return await res.json();
+      const res = await apiRequest("POST", "/api/jobs", values);
+      const data = await res.json();
+      return data;
     },
-    onSuccess: () => {
-      toast({
-        title: "Job posting created",
-        description: "Your job has been successfully posted",
-      });
-      // Reset form and redirect to jobs page
-      form.reset();
-      // Invalidate jobs cache
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      // Redirect to jobs page
-      setLocation("/jobs");
+      toast({
+        title: "Job Posted",
+        description: "Your job has been posted successfully",
+      });
+      navigate(`/jobs/${data.id}`);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error creating job posting",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
-      setIsSubmitting(false);
-    },
+    }
   });
-
+  
   async function onSubmit(values: CreateJobValues) {
-    setIsSubmitting(true);
-    createJobMutation.mutate(values);
+    mutation.mutate(values);
   }
-
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -119,13 +110,13 @@ export default function CreateJobForm() {
               <FormItem>
                 <FormLabel>Job Title*</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Senior Software Engineer" {...field} />
+                  <Input placeholder="e.g. Frontend Developer" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-
+          
           <FormField
             control={form.control}
             name="company"
@@ -133,14 +124,44 @@ export default function CreateJobForm() {
               <FormItem>
                 <FormLabel>Company Name*</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Hindustan Tech" {...field} />
+                  <Input placeholder="e.g. Acme Inc." {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location*</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Mumbai, India" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="salary"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Salary (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. ₹15-20 LPA" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -148,10 +169,7 @@ export default function CreateJobForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Job Type*</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select job type" />
@@ -169,26 +187,23 @@ export default function CreateJobForm() {
               </FormItem>
             )}
           />
-
+          
           <FormField
             control={form.control}
             name="locationType"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Location Type*</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select location type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={JobLocation.ONSITE}>On-site</SelectItem>
                     <SelectItem value={JobLocation.REMOTE}>Remote</SelectItem>
                     <SelectItem value={JobLocation.HYBRID}>Hybrid</SelectItem>
+                    <SelectItem value={JobLocation.ON_SITE}>On-site</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -196,41 +211,65 @@ export default function CreateJobForm() {
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location*</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. Bangalore, Karnataka" {...field} />
-              </FormControl>
-              <FormDescription>
-                Specify city, state or "Remote" if it's a remote position
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="salary"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Salary Range</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. ₹15-20 LPA" {...field} />
-              </FormControl>
-              <FormDescription>
-                Optional, but recommended for better applications
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="applicationLink"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Application URL (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. https://yourcompany.com/apply" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="expiresAt"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Expiry Date (Optional)</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
         <FormField
           control={form.control}
           name="description"
@@ -239,8 +278,8 @@ export default function CreateJobForm() {
               <FormLabel>Job Description*</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Describe the role, company culture, and what you're looking for in candidates"
-                  className="min-h-[120px]"
+                  placeholder="Describe the job position" 
+                  className="min-h-32" 
                   {...field} 
                 />
               </FormControl>
@@ -248,109 +287,56 @@ export default function CreateJobForm() {
             </FormItem>
           )}
         />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="responsibilities"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Responsibilities</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="List the key responsibilities for this role"
-                    className="min-h-[150px]"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="requirements"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Requirements</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="List the required skills, experience and qualifications"
-                    className="min-h-[150px]"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
+        
         <FormField
           control={form.control}
-          name="applicationUrl"
+          name="responsibilities"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Application URL</FormLabel>
+              <FormLabel>Responsibilities (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="https://yourcompany.com/careers/apply" {...field} />
+                <Textarea 
+                  placeholder="Key responsibilities for this role" 
+                  className="min-h-24" 
+                  {...field} 
+                />
               </FormControl>
-              <FormDescription>
-                Where candidates should apply for this position
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-
+        
         <FormField
           control={form.control}
-          name="expiresAt"
+          name="requirements"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Application Deadline</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormDescription>
-                When applications for this job will close
-              </FormDescription>
+            <FormItem>
+              <FormLabel>Requirements (Optional)</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Qualifications and skills required" 
+                  className="min-h-24" 
+                  {...field} 
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        <div className="flex justify-end">
+        
+        <div className="flex justify-end gap-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => navigate("/jobs")}
+          >
+            Cancel
+          </Button>
           <Button 
             type="submit" 
-            size="lg" 
-            disabled={isSubmitting}
+            disabled={mutation.isPending}
           >
-            {isSubmitting ? "Posting..." : "Post Job"}
+            {mutation.isPending ? "Posting..." : "Post Job"}
           </Button>
         </div>
       </form>

@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, PlusCircle } from "lucide-react";
+import { JobType, JobLocation } from "@shared/schema";
+import JobItem from "./job-item";
+import { useAuth } from "@/hooks/use-auth";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,77 +13,91 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Briefcase, Plus, Filter } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { JobType } from "@shared/schema";
-import { useAuth } from "@/hooks/use-auth";
-import JobItem from "./job-item";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export default function JobList() {
   const { user } = useAuth();
-  const [jobType, setJobType] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState("");
-
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [locationFilter, setLocationFilter] = useState<string>("");
+  
   const { data: jobs, isLoading } = useQuery({
-    queryKey: ["/api/jobs"],
-    select: (data) => {
-      // First filter by job type if selected
-      let filteredJobs = jobType !== "all" 
-        ? data.filter((job: any) => job.jobType === jobType)
-        : data;
+    queryKey: ["/api/jobs", selectedType],
+    queryFn: async ({ queryKey }) => {
+      const type = queryKey[1];
+      const url = type ? `/api/jobs?type=${type}` : "/api/jobs";
+      const response = await fetch(url);
       
-      // Then filter by search term if provided
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        filteredJobs = filteredJobs.filter((job: any) => 
-          job.title.toLowerCase().includes(term) || 
-          job.company.toLowerCase().includes(term) ||
-          job.location.toLowerCase().includes(term)
-        );
+      if (!response.ok) {
+        throw new Error("Failed to fetch jobs");
       }
       
-      return filteredJobs;
-    }
+      return await response.json();
+    },
   });
-
+  
+  const filteredJobs = jobs?.filter((job: any) => {
+    const matchesSearch = 
+      searchQuery === "" ||
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesLocation = 
+      locationFilter === "" || 
+      job.locationType === locationFilter;
+    
+    return matchesSearch && matchesLocation;
+  });
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-border" />
+      </div>
+    );
+  }
+  
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-        <h1 className="text-3xl font-bold">Jobs</h1>
+    <div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Jobs</h1>
+          <p className="text-muted-foreground">
+            Find the perfect opportunity in India's startup ecosystem
+          </p>
+        </div>
         
         {user && (
           <Link href="/jobs/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Post Job
+            <Button className="gap-2">
+              <PlusCircle className="h-4 w-4" />
+              Post a Job
             </Button>
           </Link>
         )}
       </div>
       
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="flex-1">
-          <div className="relative">
-            <Input
-              placeholder="Search jobs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-            <Briefcase className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div>
+          <Input
+            placeholder="Search by title, company, or location"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
         </div>
         
-        <div className="flex items-center">
-          <Filter className="mr-2 h-5 w-5 text-muted-foreground" />
-          <Select value={jobType} onValueChange={setJobType}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Job Type" />
+        <div>
+          <Select
+            value={selectedType}
+            onValueChange={setSelectedType}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by Job Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="">All Types</SelectItem>
               <SelectItem value={JobType.FULL_TIME}>Full Time</SelectItem>
               <SelectItem value={JobType.PART_TIME}>Part Time</SelectItem>
               <SelectItem value={JobType.CONTRACT}>Contract</SelectItem>
@@ -88,48 +106,37 @@ export default function JobList() {
             </SelectContent>
           </Select>
         </div>
+        
+        <div>
+          <Select
+            value={locationFilter}
+            onValueChange={setLocationFilter}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by Location Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Locations</SelectItem>
+              <SelectItem value={JobLocation.REMOTE}>Remote</SelectItem>
+              <SelectItem value={JobLocation.HYBRID}>Hybrid</SelectItem>
+              <SelectItem value={JobLocation.ON_SITE}>On-site</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
-      {isLoading ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  <Skeleton className="h-6 w-1/3" />
-                  <Skeleton className="h-4 w-1/4" />
-                  <div className="flex gap-2 pt-2">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : jobs && jobs.length > 0 ? (
-        <div className="space-y-4">
-          {jobs.map((job: any) => (
+      {filteredJobs && filteredJobs.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
+          {filteredJobs.map((job: any) => (
             <JobItem key={job.id} job={job} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 border rounded-lg">
-          <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium">No jobs found</h3>
-          <p className="text-muted-foreground mt-1">
-            {searchTerm || jobType !== "all" 
-              ? "Try adjusting your filters or search term" 
-              : "Be the first to post a job opportunity"}
+        <div className="text-center py-12 bg-muted/30 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">No jobs found</h3>
+          <p className="text-muted-foreground">
+            Try adjusting your search filters or check back later
           </p>
-          {user && (
-            <Link href="/jobs/create">
-              <Button variant="outline" className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Post Job
-              </Button>
-            </Link>
-          )}
         </div>
       )}
     </div>

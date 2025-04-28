@@ -25,8 +25,8 @@ export type PitchStatusType = typeof PitchStatus[keyof typeof PitchStatus];
 
 // Job types
 export const JobType = {
-  FULL_TIME: "full-time",
-  PART_TIME: "part-time",
+  FULL_TIME: "full_time",
+  PART_TIME: "part_time",
   CONTRACT: "contract",
   INTERNSHIP: "internship",
   FREELANCE: "freelance",

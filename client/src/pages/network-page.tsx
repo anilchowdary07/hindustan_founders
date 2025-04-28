@@ -89,12 +89,23 @@ export default function NetworkPage() {
     },
   });
 
+  // Get search query from URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlSearchQuery = searchParams.get('search') || '';
+
+  // Update search query state when URL param changes
+  React.useEffect(() => {
+    setSearchQuery(urlSearchQuery);
+  }, [urlSearchQuery]);
+
   // Filter users based on search query
-  const filteredUsers = users?.filter((user: any) => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.title && user.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (user.company && user.company.toLowerCase().includes(searchQuery.toLowerCase()))
-  ) || [];
+  const filteredUsers = users?.filter((user: any) => {
+    const query = searchQuery.toLowerCase();
+    return user.name?.toLowerCase().includes(query) ||
+           user.title?.toLowerCase().includes(query) ||
+           user.company?.toLowerCase().includes(query) ||
+           user.role?.toLowerCase().includes(query);
+  }) || [];
 
   return (
     <Layout>

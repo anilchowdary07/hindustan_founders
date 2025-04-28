@@ -82,7 +82,14 @@ export default function Header() {
             </span>
             <Input 
               className="w-full bg-white text-gray-800 rounded-md py-2 pl-10 pr-4 placeholder-gray-500"
-              placeholder="Search" 
+              placeholder="Search people, posts, or jobs..." 
+              onChange={(e) => {
+                const searchTerm = e.target.value;
+                // Navigate to network page with search term
+                if (searchTerm.trim()) {
+                  navigate(`/network?search=${encodeURIComponent(searchTerm)}`);
+                }
+              }}
             />
           </div>
         </div>

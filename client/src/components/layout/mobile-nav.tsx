@@ -30,6 +30,12 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       id: "network"
     },
     {
+      name: "Pitch",
+      path: "/pitch-room",
+      icon: DoorOpen,
+      id: "pitch"
+    },
+    {
       name: "Jobs",
       path: "/jobs",
       icon: Briefcase,
@@ -40,12 +46,6 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       path: "/notifications",
       icon: Bell,
       id: "notifications"
-    },
-    {
-      name: "Pitch",
-      path: "/pitch-room",
-      icon: DoorOpen,
-      id: "pitch"
     }
   ];
 

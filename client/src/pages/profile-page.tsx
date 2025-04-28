@@ -42,6 +42,37 @@ export default function ProfilePage() {
     queryKey: ["/api/user"],
     enabled: isCurrentUser,
   });
+  
+  const createExperienceMutation = useMutation({
+    mutationFn: async (data: typeof experienceData) => {
+      const res = await apiRequest("POST", "/api/experiences", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Experience added successfully"
+      });
+      setIsExperienceDialogOpen(false);
+      setExperienceData({
+        title: "",
+        company: "",
+        location: "",
+        startDate: "",
+        endDate: "",
+        current: false,
+        description: "",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${profileId}/experiences`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to add experience: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
 
   const {
     data: experiences,
@@ -60,7 +91,20 @@ export default function ProfilePage() {
   });
 
   // Use the profile user data if viewing own profile
-  const displayUser = isCurrentUser ? profileUser : {};
+  const displayUser = isCurrentUser ? profileUser ?? user : user;
+  
+  const handleExperienceSubmit = () => {
+    if (!experienceData.title || !experienceData.company) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill out all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createExperienceMutation.mutate(experienceData);
+  };
 
   if (!user) return null;
 
@@ -70,7 +114,7 @@ export default function ProfilePage() {
         <Skeleton className="h-64 w-full mb-6" />
       ) : (
         <ProfileHeader 
-          user={displayUser || user} 
+          user={displayUser} 
           isCurrentUser={isCurrentUser} 
         />
       )}
@@ -96,9 +140,103 @@ export default function ProfilePage() {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold">Experience</h3>
           {isCurrentUser && (
-            <Button variant="ghost" size="sm" className="text-gray-500">
-              <Plus className="h-5 w-5" />
-            </Button>
+            <Dialog open={isExperienceDialogOpen} onOpenChange={setIsExperienceDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-gray-500">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Add New Experience</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="exp-title">Job Title*</Label>
+                    <Input 
+                      id="exp-title" 
+                      value={experienceData.title}
+                      onChange={(e) => setExperienceData({...experienceData, title: e.target.value})}
+                      placeholder="e.g. Software Engineer"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="exp-company">Company*</Label>
+                    <Input 
+                      id="exp-company" 
+                      value={experienceData.company}
+                      onChange={(e) => setExperienceData({...experienceData, company: e.target.value})}
+                      placeholder="e.g. Acme Corp"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="exp-location">Location</Label>
+                    <Input 
+                      id="exp-location" 
+                      value={experienceData.location}
+                      onChange={(e) => setExperienceData({...experienceData, location: e.target.value})}
+                      placeholder="e.g. Bangalore, India"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="exp-start-date">Start Date</Label>
+                      <Input 
+                        id="exp-start-date" 
+                        type="date"
+                        value={experienceData.startDate}
+                        onChange={(e) => setExperienceData({...experienceData, startDate: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="exp-end-date">End Date</Label>
+                      <Input 
+                        id="exp-end-date" 
+                        type="date"
+                        value={experienceData.endDate}
+                        onChange={(e) => setExperienceData({...experienceData, endDate: e.target.value})}
+                        disabled={experienceData.current}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="exp-current"
+                      checked={experienceData.current}
+                      onChange={(e) => setExperienceData({...experienceData, current: e.target.checked})}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="exp-current">I currently work here</Label>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="exp-description">Description</Label>
+                    <Textarea 
+                      id="exp-description" 
+                      value={experienceData.description}
+                      onChange={(e) => setExperienceData({...experienceData, description: e.target.value})}
+                      placeholder="Describe your responsibilities and achievements"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    type="submit" 
+                    onClick={handleExperienceSubmit}
+                    disabled={createExperienceMutation.isPending}
+                  >
+                    {createExperienceMutation.isPending ? 
+                      <div className="flex items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </div> 
+                      : 'Add Experience'
+                    }
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
         

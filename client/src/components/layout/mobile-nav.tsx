@@ -1,11 +1,12 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   HomeIcon, 
   Users, 
   DoorOpen, 
   Bell, 
   Briefcase,
-  User
+  User,
+  MessageCircle
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -13,6 +14,8 @@ interface MobileNavProps {
 }
 
 export default function MobileNav({ activeTab }: MobileNavProps) {
+  const [, navigate] = useLocation();
+  
   const navItems = [
     {
       name: "Home",
@@ -33,36 +36,35 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       id: "jobs"
     },
     {
-      name: "Pitch Room",
-      path: "/pitch-room",
-      icon: DoorOpen,
-      id: "pitch-room"
+      name: "Messages",
+      path: "/messages",
+      icon: MessageCircle,
+      id: "messages"
     },
     {
-      name: "Profile",
-      path: "/profile",
-      icon: User,
-      id: "profile"
+      name: "Notify",
+      path: "/notifications",
+      icon: Bell,
+      id: "notifications"
     }
   ];
 
   return (
-    <nav className="bg-white border-t sticky bottom-0 py-2 px-4 md:hidden z-10">
+    <nav className="bg-white dark:bg-gray-900 border-t dark:border-gray-800 sticky bottom-0 py-2 px-4 md:hidden z-10">
       <div className="flex justify-between items-center">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
-            <Link 
+            <button
               key={item.id}
-              href={item.path}
+              onClick={() => navigate(item.path)}
+              className="flex flex-col items-center cursor-pointer focus:outline-none"
             >
-              <div className="flex flex-col items-center cursor-pointer">
-                <item.icon className={`${isActive ? 'text-primary' : 'text-gray-500'}`} />
-                <span className={`text-xs mt-1 ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
-                  {item.name}
-                </span>
-              </div>
-            </Link>
+              <item.icon className={`${isActive ? 'text-primary' : 'text-gray-500 dark:text-gray-400'} h-5 w-5`} />
+              <span className={`text-xs mt-1 ${isActive ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {item.name}
+              </span>
+            </button>
           );
         })}
       </div>

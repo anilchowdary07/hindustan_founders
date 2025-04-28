@@ -9,8 +9,10 @@ import {
   MessageCircle,
   User,
   LogOut,
-  Settings
+  Settings,
+  Menu
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LeafIcon } from "../ui/leaf-icon";
 import {
@@ -86,21 +88,34 @@ export default function Header() {
         </div>
         
         <div className="flex items-center space-x-5">
-          <button className="hidden md:block">
+          <ThemeToggle />
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hidden md:flex text-white hover:bg-primary/90"
+            onClick={() => navigate("/notifications")}
+          >
             <Bell size={20} />
-          </button>
-          <button className="hidden md:block">
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hidden md:flex text-white hover:bg-primary/90"
+            onClick={() => navigate("/messages")}
+          >
             <MessageCircle size={20} />
-          </button>
+          </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center">
+              <Button variant="ghost" className="p-1 h-auto">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user.avatarUrl || ""} />
                   <AvatarFallback className="bg-blue-600">{getInitials()}</AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>

@@ -15,8 +15,12 @@ export default function Layout({ children }: LayoutProps) {
   // Simple function to determine active nav item based on current route
   const getActiveTab = () => {
     if (location === "/") return "home";
+    if (location.startsWith("/network")) return "network";
+    if (location.startsWith("/jobs")) return "jobs";
+    if (location.startsWith("/messages")) return "messages";
+    if (location.startsWith("/notifications")) return "notifications";
     if (location.startsWith("/profile")) return "profile";
-    if (location === "/pitch-room") return "pitch-room";
+    if (location.startsWith("/pitch-room")) return "pitch-room";
     return "";
   };
 

@@ -17,6 +17,7 @@ import CreateJobPage from "@/pages/create-job-page";
 import NetworkPage from "@/pages/network-page";
 import SettingsPage from "@/pages/settings-page";
 import NotificationsPage from "@/pages/notifications-page";
+import MessagesPage from "@/pages/messages-page";
 import ChatSidebar from "@/components/chat/chat-sidebar";
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -30,6 +31,7 @@ function Router() {
       <ProtectedRoute path="/network" component={NetworkPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/notifications" component={NotificationsPage} />
+      <ProtectedRoute path="/messages" component={MessagesPage} />
       <ProtectedRoute path="/pitch-room" component={PitchRoomPage} />
       <ProtectedRoute path="/jobs/create" component={CreateJobPage} />
       <Route path="/jobs/:jobId" component={JobDetailPage} />
@@ -42,9 +44,11 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

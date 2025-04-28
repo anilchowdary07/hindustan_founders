@@ -6,6 +6,7 @@ import {
   insertPostSchema, 
   insertPitchSchema, 
   insertExperienceSchema,
+  insertJobSchema,
   PitchStatus,
   InsertPitch
 } from "@shared/schema";
@@ -242,6 +243,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedUser);
     } catch (error) {
       res.status(400).json({ message: "Invalid user data", error });
+    }
+  });
+
+  // Job routes
+  app.post("/api/jobs", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const validatedData = insertJobSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+      });
+
+      const job = await storage.createJob(validatedData);
+      res.status(201).json(job);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid job data", error });
+    }
+  });
+
+  app.get("/api/jobs", async (req, res) => {
+    try {
+      const jobType = req.query.type as string;
+      
+      let jobs;
+      if (jobType) {
+        jobs = await storage.getJobsByType(jobType);
+      } else {
+        jobs = await storage.getJobs();
+      }
+      
+      // Fetch user information for each job
+      const enrichedJobs = await Promise.all(
+        jobs.map(async (job) => {
+          const user = await storage.getUser(job.userId);
+          return {
+            ...job,
+            user: user ? {
+              id: user.id,
+              name: user.name,
+              company: user.company,
+              isVerified: user.isVerified,
+            } : null,
+          };
+        })
+      );
+      
+      res.json(enrichedJobs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch jobs", error });
+    }
+  });
+
+  app.get("/api/jobs/:jobId", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const job = await storage.getJobById(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      
+      // Fetch user information
+      const user = await storage.getUser(job.userId);
+      const enrichedJob = {
+        ...job,
+        user: user ? {
+          id: user.id,
+          name: user.name,
+          company: user.company,
+          isVerified: user.isVerified,
+        } : null,
+      };
+      
+      res.json(enrichedJob);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch job", error });
+    }
+  });
+
+  app.get("/api/users/:userId/jobs", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const jobs = await storage.getJobsByUserId(userId);
+      res.json(jobs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user jobs", error });
     }
   });
 

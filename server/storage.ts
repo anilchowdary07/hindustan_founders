@@ -315,6 +315,46 @@ export class DatabaseStorage implements IStorage {
       .where(eq(experiences.userId, userId))
       .orderBy(desc(experiences.current));
   }
+
+  // Job methods
+  async createJob(insertJob: InsertJob): Promise<Job> {
+    const [job] = await db
+      .insert(jobs)
+      .values(insertJob)
+      .returning();
+    return job;
+  }
+
+  async getJobs(): Promise<Job[]> {
+    return await db
+      .select()
+      .from(jobs)
+      .orderBy(desc(jobs.createdAt));
+  }
+
+  async getJobsByUserId(userId: number): Promise<Job[]> {
+    return await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.userId, userId))
+      .orderBy(desc(jobs.createdAt));
+  }
+
+  async getJobsByType(jobType: string): Promise<Job[]> {
+    return await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.jobType, jobType))
+      .orderBy(desc(jobs.createdAt));
+  }
+
+  async getJobById(id: number): Promise<Job | undefined> {
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, id));
+    return job;
+  }
 }
 
 // Use database storage

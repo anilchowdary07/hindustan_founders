@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
   Briefcase, 
@@ -76,6 +77,7 @@ const formatLocationType = (locationType: JobLocationType) => {
 export default function JobDetail() {
   const { jobId } = useParams();
   const [shareTooltipOpen, setShareTooltipOpen] = useState(false);
+  const { toast } = useToast();
   
   const { data: job, isLoading, error } = useQuery({
     queryKey: [`/api/jobs/${jobId}`],
@@ -198,7 +200,7 @@ export default function JobDetail() {
           </div>
           
           <div className="flex-shrink-0 flex flex-col gap-3 w-full md:w-auto">
-            {job.applicationLink && (
+            {job.applicationLink ? (
               <a 
                 href={job.applicationLink}
                 target="_blank" 
@@ -210,6 +212,19 @@ export default function JobDetail() {
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Button>
               </a>
+            ) : (
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  toast({
+                    title: "No application link available",
+                    description: `Please contact ${job.company} directly to apply for this position.`,
+                  });
+                }}
+              >
+                Apply Now
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
             )}
             
             <TooltipProvider>
@@ -354,7 +369,21 @@ export default function JobDetail() {
                       </Button>
                     </a>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No direct application link available. Please contact the company directly.</p>
+                    <>
+                      <p className="text-sm text-muted-foreground mb-2">No direct application link available. Please contact the company directly.</p>
+                      <Button 
+                        className="w-full gap-2"
+                        onClick={() => {
+                          toast({
+                            title: "No application link available",
+                            description: `Please contact ${job.company} directly to apply for this position.`,
+                          });
+                        }}
+                      >
+                        Apply Now
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>

@@ -25,7 +25,7 @@ export default function JobList() {
     queryKey: ["/api/jobs", selectedType],
     queryFn: async ({ queryKey }) => {
       const type = queryKey[1];
-      const url = type ? `/api/jobs?type=${type}` : "/api/jobs";
+      const url = type && type !== "all" ? `/api/jobs?type=${type}` : "/api/jobs";
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -45,6 +45,7 @@ export default function JobList() {
     
     const matchesLocation = 
       locationFilter === "" || 
+      locationFilter === "all" ||
       job.locationType === locationFilter;
     
     return matchesSearch && matchesLocation;

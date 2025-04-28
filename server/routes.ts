@@ -16,23 +16,27 @@ import path from "path";
 import fs from "fs";
 
 // Configure multer for file uploads
+const isVercel = process.env.VERCEL === '1';
 const uploadDir = path.join(process.cwd(), "uploads");
 
-// Ensure the upload directory exists
-if (!fs.existsSync(uploadDir)) {
+// Ensure the upload directory exists in non-Vercel environments
+if (!isVercel && !fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage_config = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
+// Use memory storage for Vercel, disk storage for other environments
+const storage_config = isVercel 
+  ? multer.memoryStorage() 
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+      }
+    });
 
 const upload = multer({ 
   storage: storage_config,
@@ -52,11 +56,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
   // Serve static files from uploads directory
-  app.use('/uploads', (req, res, next) => {
-    // Set cache control headers to improve performance
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-    next();
-  }, fs.existsSync(uploadDir) ? express.static(uploadDir) : (req, res, next) => next());
+  if (!isVercel) {
+    app.use('/uploads', (req, res, next) => {
+      // Set cache control headers to improve performance
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      next();
+    }, fs.existsSync(uploadDir) ? express.static(uploadDir) : (req, res, next) => next());
+  } else {
+    // In Vercel environment, handle uploads differently
+    app.get('/uploads/:filename', (req, res) => {
+      // This is a placeholder - in a real app, you would serve from a cloud storage service
+      res.status(404).json({ message: "File uploads not supported in this environment" });
+    });
+  }
 
   // Post routes
   app.post("/api/posts", async (req, res) => {
@@ -97,8 +109,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No image file provided" });
         }
         
-        // Create relative path to the uploaded file for storage
-        const mediaPath = `/uploads/${file.filename}`;
+        let mediaPath;
+        
+        if (isVercel) {
+          // In Vercel, we would normally upload to a cloud storage service
+          // For now, we'll just use a placeholder URL
+          mediaPath = `/uploads/placeholder-${Date.now()}.jpg`;
+          
+          // In a real implementation, you would upload the file.buffer to a service like S3
+          // const uploadResult = await uploadToCloudStorage(file.buffer, file.originalname);
+          // mediaPath = uploadResult.url;
+        } else {
+          // Local environment - use the file system
+          mediaPath = `/uploads/${file.filename}`;
+        }
         
         // Validate and create post
         const validatedData = insertPostSchema.parse({

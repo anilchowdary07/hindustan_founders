@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
+import createMemoryStore from "memorystore";
 
 declare global {
   namespace Express {
@@ -29,13 +30,18 @@ export async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isVercel = process.env.VERCEL === '1';
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "hindustan-founders-secret",
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: isVercel ? new (createMemoryStore(session))() : storage.sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax'
     }
   };
 

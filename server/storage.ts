@@ -4,6 +4,8 @@ import createMemoryStore from "memorystore";
 import connectPg from "connect-pg-simple";
 import { db, pool } from "./db";
 import { eq, desc } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
 
 const MemoryStore = createMemoryStore(session);
 const PostgresSessionStore = connectPg(session);

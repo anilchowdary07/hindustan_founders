@@ -130,13 +130,27 @@ export default function PostItem({ post }: PostItemProps) {
               <span>Comment</span>
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Comments</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <Textarea placeholder="Write a comment..." />
-              <Button className="w-full">Post Comment</Button>
+            <div className="mt-4 space-y-4">
+              <Textarea 
+                placeholder="Write a comment..." 
+                className="min-h-[100px]"
+                onChange={(e) => console.log(e.target.value)}
+              />
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  toast({
+                    title: "Comment posted",
+                    description: "Your comment has been posted successfully",
+                  });
+                }}
+              >
+                Post Comment
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -146,7 +160,8 @@ export default function PostItem({ post }: PostItemProps) {
           size="sm" 
           className="flex items-center text-gray-600"
           onClick={() => {
-            navigator.clipboard.writeText(window.location.href);
+            const postUrl = `${window.location.origin}/post/${post.id}`;
+            navigator.clipboard.writeText(postUrl);
             toast({
               title: "Link copied!",
               description: "Post link has been copied to clipboard",

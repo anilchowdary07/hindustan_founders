@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { User } from "@shared/schema";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -93,16 +94,16 @@ export default function ProfilePage() {
   // Use the profile user data if viewing own profile
   const displayUser = isCurrentUser ? profileUser ?? user : user;
   
-  // Make sure displayUser has the required properties for ProfileHeader
+  // Create a properly typed user object for the profile header
   const userForProfile = {
-    id: displayUser && 'id' in displayUser ? displayUser.id : 0,
-    name: displayUser && 'name' in displayUser ? displayUser.name : "",
-    role: displayUser && 'role' in displayUser ? displayUser.role : "",
-    title: displayUser && 'title' in displayUser ? displayUser.title : undefined,
-    company: displayUser && 'company' in displayUser ? displayUser.company : undefined,
-    location: displayUser && 'location' in displayUser ? displayUser.location : undefined,
-    bio: displayUser && 'bio' in displayUser ? displayUser.bio : undefined,
-    avatarUrl: displayUser && 'avatarUrl' in displayUser ? displayUser.avatarUrl : undefined,
+    id: (displayUser as any)?.id || 0,
+    name: (displayUser as any)?.name || "",
+    role: (displayUser as any)?.role || "",
+    title: (displayUser as any)?.title || undefined,
+    company: (displayUser as any)?.company || undefined,
+    location: (displayUser as any)?.location || undefined,
+    bio: (displayUser as any)?.bio || undefined,
+    avatarUrl: (displayUser as any)?.avatarUrl || undefined,
   };
   
   const handleExperienceSubmit = () => {

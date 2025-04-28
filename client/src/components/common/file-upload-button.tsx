@@ -9,7 +9,7 @@ import {
   FileImage, 
   FileVideo, 
   FileAudio, 
-  FilePdf, 
+  File as FilePdf, 
   Package, 
   X, 
   Check,

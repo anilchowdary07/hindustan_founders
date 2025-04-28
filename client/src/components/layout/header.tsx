@@ -56,6 +56,18 @@ export default function Header() {
               <h1 className="hidden md:block ml-2 font-bold">Hindustan Founders</h1>
             </div>
           </Link>
+          
+          <div className="hidden md:flex ml-8 space-x-6">
+            <Link href="/">
+              <a className="text-white hover:text-blue-200">Home</a>
+            </Link>
+            <Link href="/jobs">
+              <a className="text-white hover:text-blue-200">Jobs</a>
+            </Link>
+            <Link href="/pitch-room">
+              <a className="text-white hover:text-blue-200">Pitch Room</a>
+            </Link>
+          </div>
         </div>
         
         <div className="flex-1 max-w-md mx-4">

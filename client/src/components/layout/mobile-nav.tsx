@@ -27,16 +27,16 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       id: "network"
     },
     {
+      name: "Jobs",
+      path: "/jobs",
+      icon: Briefcase,
+      id: "jobs"
+    },
+    {
       name: "Pitch Room",
       path: "/pitch-room",
       icon: DoorOpen,
       id: "pitch-room"
-    },
-    {
-      name: "Notifications",
-      path: "/notifications",
-      icon: Bell,
-      id: "notifications"
     },
     {
       name: "Profile",

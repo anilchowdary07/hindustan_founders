@@ -10,6 +10,9 @@ import RoleSelectionPage from "@/pages/role-selection-page";
 import HomePage from "@/pages/home-page";
 import ProfilePage from "@/pages/profile-page";
 import PitchRoomPage from "@/pages/pitch-room-page";
+import JobsPage from "@/pages/jobs-page";
+import JobDetailPage from "@/pages/job-detail-page";
+import CreateJobPage from "@/pages/create-job-page";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
@@ -20,6 +23,9 @@ function Router() {
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/profile/:id?" component={ProfilePage} />
       <ProtectedRoute path="/pitch-room" component={PitchRoomPage} />
+      <ProtectedRoute path="/jobs/create" component={CreateJobPage} />
+      <Route path="/jobs/:jobId" component={JobDetailPage} />
+      <Route path="/jobs" component={JobsPage} />
       <Route component={NotFound} />
     </Switch>
   );

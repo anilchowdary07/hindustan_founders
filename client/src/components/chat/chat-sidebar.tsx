@@ -32,7 +32,7 @@ export default function ChatSidebar() {
   const [activeTab, setActiveTab] = useState<'chats' | 'contacts'>('chats');
   const [message, setMessage] = useState("");
   const [activeChat, setActiveChat] = useState<number | null>(null);
-  
+
   // Mock data for demo purposes
   const contacts: ChatContact[] = [
     {
@@ -63,7 +63,7 @@ export default function ChatSidebar() {
       online: true,
     },
   ];
-  
+
   const messages: Record<number, ChatMessage[]> = {
     1: [
       {
@@ -152,11 +152,11 @@ export default function ChatSidebar() {
       },
     ],
   };
-  
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
-  
+
   const handleSendMessage = () => {
     if (message.trim() && activeChat) {
       // In a real app, you would send this to an API
@@ -164,7 +164,7 @@ export default function ChatSidebar() {
       setMessage("");
     }
   };
-  
+
   if (!isOpen) {
     return (
       <div className="fixed bottom-5 right-5 z-50">
@@ -177,7 +177,7 @@ export default function ChatSidebar() {
       </div>
     );
   }
-  
+
   return (
     <div className="fixed bottom-5 right-5 z-50 w-80 sm:w-96 h-[500px] bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col border border-gray-200 dark:border-gray-700">
       {/* Header */}
@@ -194,7 +194,7 @@ export default function ChatSidebar() {
           </Button>
         </div>
       </div>
-      
+
       {/* Tabs (when no chat is active) */}
       {!activeChat && (
         <div className="flex border-b dark:border-gray-700">
@@ -209,14 +209,17 @@ export default function ChatSidebar() {
           <Button
             variant="ghost"
             className={`flex-1 rounded-none dark:text-gray-200 ${activeTab === 'contacts' ? 'border-b-2 border-primary dark:text-white' : ''}`}
-            onClick={() => setActiveTab('contacts')}
+            onClick={() => {
+              setActiveTab('contacts');
+              setActiveChat(null);
+            }}
           >
             <Users size={16} className="mr-2" />
             Contacts
           </Button>
         </div>
       )}
-      
+
       {/* Contact List */}
       {!activeChat && (
         <div className="flex-1 overflow-y-auto">
@@ -253,7 +256,7 @@ export default function ChatSidebar() {
           ))}
         </div>
       )}
-      
+
       {/* Active Chat */}
       {activeChat && (
         <>
@@ -279,7 +282,7 @@ export default function ChatSidebar() {
               </p>
             </div>
           </div>
-          
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
             {messages[activeChat]?.map((msg) => (
@@ -302,7 +305,7 @@ export default function ChatSidebar() {
               </div>
             ))}
           </div>
-          
+
           {/* Message Input */}
           <div className="p-3 border-t dark:border-gray-700 flex gap-2">
             <Input 
@@ -322,7 +325,7 @@ export default function ChatSidebar() {
           </div>
         </>
       )}
-      
+
       {/* Close Button */}
       <Button 
         className="absolute -top-4 -right-4 h-8 w-8 rounded-full p-0 shadow-lg"

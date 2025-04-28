@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { ThumbsUp, MessageSquare, Share2, Send, ZoomIn } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 interface PostItemProps {
   post: {
@@ -30,6 +32,7 @@ interface PostItemProps {
 export default function PostItem({ post }: PostItemProps) {
   const [liked, setLiked] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
+  const { toast } = useToast();
   
   const getInitials = (name: string) => {
     return name

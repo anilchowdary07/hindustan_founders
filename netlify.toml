@@ -1,0 +1,24 @@
+[build]
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "dist/public"
+
+# This redirect is needed for a Single Page Application
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# API redirects - forward API requests to your serverless functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[functions]
+  directory = "netlify/functions"
+  
+[dev]
+  command = "npm run dev"
+  port = 3000
+  publish = "dist/public"

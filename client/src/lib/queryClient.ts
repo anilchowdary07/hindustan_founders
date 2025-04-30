@@ -12,12 +12,20 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Adjust URL for Netlify Functions
+  // Determine if we're on Netlify or Vercel
   let apiUrl = url;
+  const isNetlify = window.location.hostname.includes('netlify.app') || 
+                   window.location.hostname === 'localhost';
+  
   if (url.startsWith('/api/')) {
-    // Convert /api/xyz to /.netlify/functions/api/xyz for Netlify deployment
-    // Remove the /api prefix as our Netlify function handles paths directly
-    apiUrl = url.replace(/^\/api\//, '/.netlify/functions/api/');
+    if (isNetlify) {
+      // Use Netlify-specific path format
+      apiUrl = url.replace(/^\/api\//, '/.netlify/functions/api/');
+      console.log('Using Netlify API path:', apiUrl);
+    } else {
+      // Keep as /api/ for Vercel
+      console.log('Using Vercel API path:', apiUrl);
+    }
   }
   
   // Ensure URL is absolute

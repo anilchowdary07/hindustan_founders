@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "NODE_ENV=development PORT=3000 tsx --env-file=.env server/index.ts",
     "build": "vite build && esbuild server/*.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && mkdir -p .vercel/output/functions/api && esbuild api/index.js --platform=node --packages=external --bundle --format=esm --outdir=.vercel/output/functions/api && mkdir -p .vercel/output/static && cp -r dist/public/* .vercel/output/static/ && cp -r dist/public/* .vercel/output/ 2>/dev/null || true",

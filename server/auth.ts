@@ -113,7 +113,8 @@ export function setupAuth(app: Express) {
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
       secure: isProduction, // Set to true in production
-      sameSite: 'lax'
+      httpOnly: true,
+      sameSite: isProduction ? 'none' : 'lax' // 'none' is required for cross-site cookies in production
     }
   };
 
@@ -211,12 +212,12 @@ export function setupAuth(app: Express) {
           clearTimeout(registrationTimeout);
           return res.status(400).json({ message: "Username already exists" });
         }
-      } catch (dbError) {
+      } catch (dbError: unknown) {
         console.error("Database error checking existing user:", dbError);
         clearTimeout(registrationTimeout);
         return res.status(500).json({ 
           message: "Error checking username availability", 
-          error: process.env.NODE_ENV === 'development' ? dbError.message : undefined 
+          error: process.env.NODE_ENV === 'development' ? dbError instanceof Error ? dbError.message : String(dbError) : undefined 
         });
       }
       
@@ -262,7 +263,7 @@ export function setupAuth(app: Express) {
         clearTimeout(registrationTimeout);
         
         // Check for duplicate username error from database
-        const errorMessage = createError.message || "";
+        const errorMessage = createError instanceof Error ? createError.message : String(createError) || "";
         if (errorMessage.includes("duplicate") || errorMessage.includes("unique")) {
           return res.status(409).json({ 
             message: "Username or email already exists", 
@@ -275,12 +276,12 @@ export function setupAuth(app: Express) {
           error: process.env.NODE_ENV === 'development' ? errorMessage : undefined 
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Unexpected error in registration:", error);
       clearTimeout(registrationTimeout);
       res.status(500).json({ 
         message: "Registration failed", 
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        error: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined 
       });
     }
   });
@@ -294,7 +295,7 @@ export function setupAuth(app: Express) {
     }
     
     // Use passport authenticate with custom callback for better error handling
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: SelectUser | false, info: { message: string }) => {
       if (err) {
         console.error("Error during authentication:", err);
         return res.status(500).json({ message: "Authentication error" });

@@ -12,9 +12,17 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Ensure URL is absolute for Vercel deployment
+  const apiUrl = url.startsWith('http') ? url : window.location.origin + url;
+  
+  const res = await fetch(apiUrl, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      // Add cache control headers to prevent caching of API requests
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache"
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,8 +37,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Ensure URL is absolute for Vercel deployment
+    const url = queryKey[0] as string;
+    const apiUrl = url.startsWith('http') ? url : window.location.origin + url;
+    
+    const res = await fetch(apiUrl, {
       credentials: "include",
+      headers: {
+        // Add cache control headers to prevent caching of API requests
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+      }
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

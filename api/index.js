@@ -17,6 +17,19 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Setup CORS for Vercel environment
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.header('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Setup session
 const MemoryStore = createMemoryStore(session);
 const sessionStore = new MemoryStore({
@@ -31,8 +44,9 @@ app.use(session({
   store: sessionStore,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    secure: false, // Set to true if using HTTPS
-    sameSite: 'lax'
+    secure: process.env.NODE_ENV === 'production', // Secure in production
+    httpOnly: true,
+    sameSite: 'none' // Required for cross-site cookies in production
   }
 }));
 

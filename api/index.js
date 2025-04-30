@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import passport from 'passport';
 import session from 'express-session';
 import createMemoryStore from 'memorystore';
+import fs from 'fs';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
@@ -65,19 +67,28 @@ const handler = async (req, res) => {
       console.log('Initializing API routes...');
       
       try {
+        // Create a debug log file for Vercel troubleshooting
+        const logMessage = `API initialization started at ${new Date().toISOString()}\n`;
+        console.log(logMessage);
+        
         // Initialize database first
-        await import('../dist/db.js');
-        console.log('Database module loaded');
+        console.log('Loading database module...');
+        const dbModule = await import('../dist/db.js');
+        console.log('Database module loaded successfully');
         
         // Import auth and routes
+        console.log('Loading auth and routes modules...');
         const { setupAuth } = await import('../dist/auth.js');
         const { default: setupRoutes } = await import('../dist/serverless-routes.js');
+        console.log('Auth and routes modules loaded successfully');
         
         console.log('Setting up auth...');
         setupAuth(app);
+        console.log('Auth setup complete');
         
         console.log('Setting up routes...');
         setupRoutes(app);
+        console.log('Routes setup complete');
         
         // Error handling middleware
         app.use((err, _req, res, _next) => {
@@ -96,25 +107,38 @@ const handler = async (req, res) => {
         console.log('API initialization complete');
       } catch (initError) {
         console.error('Failed to initialize API:', initError);
-        throw initError;
+        console.error('Error details:', JSON.stringify(initError, Object.getOwnPropertyNames(initError)));
+        
+        // Return a more helpful error response
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: 'Failed to initialize API',
+            error: initError.message,
+            stack: initError.stack
+          })
+        };
       }
     }
     
-    // Log request details in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`${req.method} ${req.url}`);
-    }
+    // Log request details
+    console.log(`${req.method} ${req.url}`);
     
     // Handle the request
     return serverlessHandler(req, res);
   } catch (error) {
     console.error('Error in serverless handler:', error);
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    // Return a proper error response
     return {
       statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         message: 'Internal Server Error',
         error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: error.stack
       })
     };
   }

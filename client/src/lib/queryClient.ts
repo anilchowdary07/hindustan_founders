@@ -16,7 +16,8 @@ export async function apiRequest(
   let apiUrl = url;
   if (url.startsWith('/api/')) {
     // Convert /api/xyz to /.netlify/functions/api/xyz for Netlify deployment
-    apiUrl = url.replace(/^\/api/, '/.netlify/functions/api');
+    // Remove the /api prefix as our Netlify function handles paths directly
+    apiUrl = url.replace(/^\/api\//, '/.netlify/functions/api/');
   }
   
   // Ensure URL is absolute
@@ -55,7 +56,8 @@ export const getQueryFn: <T>(options: {
     let apiUrl = url;
     if (url.startsWith('/api/')) {
       // Convert /api/xyz to /.netlify/functions/api/xyz for Netlify deployment
-      apiUrl = url.replace(/^\/api/, '/.netlify/functions/api');
+      // Remove the /api prefix as our Netlify function handles paths directly
+      apiUrl = url.replace(/^\/api\//, '/.netlify/functions/api/');
     }
     
     // Ensure URL is absolute

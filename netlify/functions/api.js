@@ -1,23 +1,17 @@
 // netlify/functions/api.js
 import express from 'express';
 import serverless from 'serverless-http';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import session from 'express-session';
 import createMemoryStore from 'memorystore';
 import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
 import dotenv from 'dotenv';
+import { createHash } from 'crypto';
 
 // Load environment variables
 dotenv.config();
 
-// Import your server modules
-import { setupRoutes } from '../../server/routes.js';
-import { setupAuth } from '../../server/auth.js';
-import { setupDb } from '../../server/db.js';
-
 const app = express();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Setup CORS for cross-origin requests
 app.use((req, res, next) => {
@@ -50,9 +44,9 @@ app.use(session({
   store: sessionStore,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    secure: process.env.NODE_ENV === 'production', // Secure in production
+    secure: false, // Set to false for development
     httpOnly: true,
-    sameSite: 'none' // Required for cross-site cookies in production
+    sameSite: 'lax' // Use lax for better compatibility
   }
 }));
 
@@ -60,32 +54,201 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Setup database
-try {
-  console.log('Initializing database...');
-  setupDb(app);
-  console.log('Database initialized successfully');
-} catch (error) {
-  console.error('Error initializing database:', error);
-}
+// Mock users for testing
+const users = [
+  {
+    id: 1,
+    username: 'admin',
+    password: createHash('sha256').update('admin123').digest('hex'),
+    name: 'Admin User',
+    email: 'admin@example.com',
+    role: 'admin',
+    profilePicture: '/placeholder-avatar.jpg',
+    bio: 'Administrator account',
+    connections: [],
+    pendingConnections: [],
+    profileStrength: 100
+  },
+  {
+    id: 2,
+    username: 'founder',
+    password: createHash('sha256').update('founder123').digest('hex'),
+    name: 'Founder User',
+    email: 'founder@example.com',
+    role: 'founder',
+    profilePicture: '/placeholder-avatar.jpg',
+    bio: 'Founder account',
+    connections: [],
+    pendingConnections: [],
+    profileStrength: 80
+  },
+  {
+    id: 3,
+    username: 'investor',
+    password: createHash('sha256').update('investor123').digest('hex'),
+    name: 'Investor User',
+    email: 'investor@example.com',
+    role: 'investor',
+    profilePicture: '/placeholder-avatar.jpg',
+    bio: 'Investor account',
+    connections: [],
+    pendingConnections: [],
+    profileStrength: 90
+  }
+];
 
-// Setup authentication
-try {
-  console.log('Setting up authentication...');
-  setupAuth(app);
-  console.log('Authentication setup complete');
-} catch (error) {
-  console.error('Error setting up authentication:', error);
-}
+// Setup simple authentication
+passport.use(new LocalStrategy((username, password, done) => {
+  console.log(`Login attempt for username: ${username}`);
+  const hashedPassword = createHash('sha256').update(password).digest('hex');
+  const user = users.find(u => u.username === username);
+  
+  if (!user) {
+    console.log(`User not found: ${username}`);
+    return done(null, false);
+  }
+  
+  if (user.password !== hashedPassword) {
+    console.log('Invalid password');
+    return done(null, false);
+  }
+  
+  console.log(`User authenticated: ${username}`);
+  return done(null, user);
+}));
 
-// Setup routes
-try {
-  console.log('Setting up routes...');
-  setupRoutes(app);
-  console.log('Routes setup complete');
-} catch (error) {
-  console.error('Error setting up routes:', error);
-}
+passport.serializeUser((user, done) => {
+  console.log(`Serializing user: ${user.id}`);
+  done(null, user.id);
+});
+
+passport.deserializeUser((id, done) => {
+  console.log(`Deserializing user: ${id}`);
+  const user = users.find(u => u.id === id);
+  done(null, user || null);
+});
+
+// API Routes
+app.post('/login', (req, res, next) => {
+  console.log('Login request received:', req.body);
+  
+  if (!req.body.username || !req.body.password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+  
+  passport.authenticate('local', (err, user, info) => {
+    if (err) {
+      console.error('Authentication error:', err);
+      return res.status(500).json({ message: 'Authentication error' });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+    
+    req.login(user, (loginErr) => {
+      if (loginErr) {
+        console.error('Login error:', loginErr);
+        return res.status(500).json({ message: 'Login error' });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      console.log('Login successful for:', userWithoutPassword.username);
+      res.status(200).json(userWithoutPassword);
+    });
+  })(req, res, next);
+});
+
+app.post('/register', (req, res) => {
+  console.log('Register request received:', req.body);
+  
+  // Validate required fields
+  if (!req.body.username || !req.body.password || !req.body.name || !req.body.email || !req.body.role) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+  
+  // Check if username already exists
+  if (users.some(u => u.username === req.body.username)) {
+    return res.status(400).json({ message: 'Username already exists' });
+  }
+  
+  // Create new user
+  const newUser = {
+    id: users.length + 1,
+    username: req.body.username,
+    password: createHash('sha256').update(req.body.password).digest('hex'),
+    name: req.body.name,
+    email: req.body.email,
+    role: req.body.role,
+    profilePicture: '/placeholder-avatar.jpg',
+    bio: '',
+    connections: [],
+    pendingConnections: [],
+    profileStrength: 30
+  };
+  
+  users.push(newUser);
+  
+  // Log the user in
+  req.login(newUser, (err) => {
+    if (err) {
+      console.error('Login error after registration:', err);
+      return res.status(500).json({ message: 'Login error after registration' });
+    }
+    
+    // Remove password from response
+    const { password, ...userWithoutPassword } = newUser;
+    console.log('Registration successful for:', userWithoutPassword.username);
+    res.status(201).json(userWithoutPassword);
+  });
+});
+
+app.get('/user', (req, res) => {
+  console.log('User request received');
+  
+  if (!req.isAuthenticated()) {
+    console.log('User not authenticated');
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  
+  // Remove password from response
+  const { password, ...userWithoutPassword } = req.user;
+  console.log('User data sent for:', userWithoutPassword.username);
+  res.json(userWithoutPassword);
+});
+
+app.post('/logout', (req, res) => {
+  console.log('Logout request received');
+  
+  if (!req.isAuthenticated()) {
+    return res.status(200).json({ message: 'Already logged out' });
+  }
+  
+  req.logout((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+      return res.status(500).json({ message: 'Logout failed' });
+    }
+    
+    if (req.session) {
+      req.session.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error('Session destruction error:', sessionErr);
+        }
+        res.clearCookie('connect.sid');
+        return res.status(200).json({ message: 'Logged out successfully' });
+      });
+    } else {
+      res.status(200).json({ message: 'Logged out successfully' });
+    }
+  });
+});
+
+// Default route for testing
+app.get('/', (req, res) => {
+  res.json({ message: 'API is working!' });
+});
 
 // Add error handling middleware
 app.use((err, _req, res, _next) => {
@@ -100,9 +263,5 @@ app.use((err, _req, res, _next) => {
 
 // Export the serverless function
 export const handler = serverless(app, {
-  binary: ['image/*', 'application/pdf', 'application/zip'],
-  provider: {
-    // Increase timeout for Netlify functions
-    timeout: 30
-  }
+  binary: ['image/*', 'application/pdf', 'application/zip']
 });

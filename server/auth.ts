@@ -2,7 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
@@ -19,12 +19,15 @@ const scryptAsync = promisify(scrypt);
 // Add a timeout to the password hashing function
 export async function hashPassword(password: string, timeoutMs = 5000) {
   return new Promise<string>(async (resolve, reject) => {
+    if (!password) {
+      return reject(new Error("Password cannot be empty"));
+    }
+    
     // Set a timeout
     const timeout = setTimeout(() => {
       console.error("Password hashing timed out, using fallback");
       // Use a simpler hash as fallback
-      const crypto = require('crypto');
-      const fallbackHash = crypto.createHash('sha256').update(password).digest('hex');
+      const fallbackHash = createHash('sha256').update(password).digest('hex');
       resolve(`${fallbackHash}.fallback`);
     }, timeoutMs);
     
@@ -37,19 +40,33 @@ export async function hashPassword(password: string, timeoutMs = 5000) {
     } catch (error) {
       clearTimeout(timeout);
       console.error("Error in password hashing:", error);
-      reject(error);
+      
+      // Use fallback instead of rejecting to prevent registration failures
+      const fallbackHash = createHash('sha256').update(password).digest('hex');
+      resolve(`${fallbackHash}.fallback`);
     }
   });
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
   try {
+    // Check for empty inputs
+    if (!supplied || !stored) {
+      console.error("Empty password or hash provided to comparePasswords");
+      return false;
+    }
+    
+    // Check if stored password has the expected format
+    if (!stored.includes('.')) {
+      console.error("Invalid stored password format");
+      return false;
+    }
+    
     const [hashed, salt] = stored.split(".");
     
     // Handle fallback hash case
     if (salt === 'fallback') {
-      const crypto = require('crypto');
-      const suppliedHash = crypto.createHash('sha256').update(supplied).digest('hex');
+      const suppliedHash = createHash('sha256').update(supplied).digest('hex');
       return hashed === suppliedHash;
     }
     
@@ -81,14 +98,21 @@ export function setupAuth(app: Express) {
       })
     : storage.sessionStore;
   
+  // Generate a random secret if one is not provided in the environment
+  if (!process.env.SESSION_SECRET) {
+    console.warn("SESSION_SECRET not set in environment variables. Using a random secret (will invalidate existing sessions on restart).");
+    // Use randomBytes directly from crypto which is already imported at the top
+    process.env.SESSION_SECRET = randomBytes(32).toString('hex');
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "hindustan-founders-secret",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      secure: false, // Set to true if using HTTPS
+      secure: isProduction, // Set to true in production
       sameSite: 'lax'
     }
   };
@@ -172,9 +196,9 @@ export function setupAuth(app: Express) {
           hashedPassword = await hashPassword(validatedData.password);
         } catch (hashError) {
           console.error("Error hashing password:", hashError);
-          // Use a simple hash as fallback
-          const crypto = await import('crypto');
-          hashedPassword = crypto.createHash('sha256').update(validatedData.password).digest('hex');
+          // Use a simple hash as fallback using the crypto module already imported at the top
+          const hash = createHash('sha256');
+          hashedPassword = hash.update(validatedData.password).digest('hex');
         }
       })();
       
@@ -201,10 +225,19 @@ export function setupAuth(app: Express) {
       
       // Create user with pre-hashed password
       try {
+        // Check if hashedPassword was successfully created
+        if (!hashedPassword) {
+          throw new Error("Password hashing failed");
+        }
+        
         const user = await storage.createUser({
           ...validatedData,
           password: hashedPassword,
         });
+
+        if (!user || !user.id) {
+          throw new Error("User creation returned invalid user object");
+        }
 
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
@@ -214,7 +247,12 @@ export function setupAuth(app: Express) {
           clearTimeout(registrationTimeout);
           if (err) {
             console.error("Login error after registration:", err);
-            return next(err);
+            // Still return success even if auto-login fails
+            console.log("User registered successfully (but auto-login failed):", user.id);
+            return res.status(201).json({
+              ...userWithoutPassword,
+              message: "Account created successfully, but you need to log in manually."
+            });
           }
           console.log("User registered successfully:", user.id);
           res.status(201).json(userWithoutPassword);
@@ -222,9 +260,19 @@ export function setupAuth(app: Express) {
       } catch (createError) {
         console.error("Error creating user:", createError);
         clearTimeout(registrationTimeout);
+        
+        // Check for duplicate username error from database
+        const errorMessage = createError.message || "";
+        if (errorMessage.includes("duplicate") || errorMessage.includes("unique")) {
+          return res.status(409).json({ 
+            message: "Username or email already exists", 
+            error: process.env.NODE_ENV === 'development' ? errorMessage : undefined 
+          });
+        }
+        
         return res.status(500).json({ 
           message: "Failed to create user account", 
-          error: process.env.NODE_ENV === 'development' ? createError.message : undefined 
+          error: process.env.NODE_ENV === 'development' ? errorMessage : undefined 
         });
       }
     } catch (error) {
@@ -237,23 +285,91 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    // Remove password from response
-    const { password, ...userWithoutPassword } = req.user;
-    res.status(200).json(userWithoutPassword);
+  app.post("/api/login", (req, res, next) => {
+    // Validate required fields
+    if (!req.body.username || !req.body.password) {
+      return res.status(400).json({ 
+        message: "Username and password are required" 
+      });
+    }
+    
+    // Use passport authenticate with custom callback for better error handling
+    passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        console.error("Error during authentication:", err);
+        return res.status(500).json({ message: "Authentication error" });
+      }
+      
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // Log the user in
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Error during login:", loginErr);
+          return res.status(500).json({ message: "Login error" });
+        }
+        
+        // Remove password from response
+        const { password, ...userWithoutPassword } = user;
+        res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
+    // If user is not authenticated, just return success
+    if (!req.isAuthenticated()) {
+      return res.status(200).json({ message: "Already logged out" });
+    }
+    
     req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
+      if (err) {
+        console.error("Error during logout:", err);
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      
+      // Destroy the session to ensure complete logout
+      if (req.session) {
+        req.session.destroy((sessionErr) => {
+          if (sessionErr) {
+            console.error("Error destroying session:", sessionErr);
+          }
+          // Clear the cookie even if session destruction fails
+          res.clearCookie('connect.sid');
+          return res.status(200).json({ message: "Logged out successfully" });
+        });
+      } else {
+        res.status(200).json({ message: "Logged out successfully" });
+      }
     });
   });
 
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    // Remove password from response
-    const { password, ...userWithoutPassword } = req.user;
-    res.json(userWithoutPassword);
+  app.get("/api/user", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Get fresh user data from database to ensure it's up-to-date
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        // This should rarely happen, but handle it just in case
+        req.logout((err) => {
+          if (err) console.error("Error logging out user with missing data:", err);
+          return res.status(404).json({ message: "User not found" });
+        });
+        return;
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ message: "Error fetching user data" });
+    }
   });
 }

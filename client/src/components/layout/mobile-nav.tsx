@@ -3,9 +3,7 @@ import {
   HomeIcon, 
   Users, 
   DoorOpen, 
-  Bell, 
-  Briefcase,
-  User,
+  Settings, 
   MessageCircle
 } from "lucide-react";
 
@@ -33,24 +31,24 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       name: "Pitch",
       path: "/pitch-room",
       icon: DoorOpen,
-      id: "pitch"
+      id: "pitch-room"
     },
     {
-      name: "Jobs",
-      path: "/jobs",
-      icon: Briefcase,
-      id: "jobs"
+      name: "Chats",
+      path: "/messages",
+      icon: MessageCircle,
+      id: "messages"
     },
     {
-      name: "Notifications",
-      path: "/notifications",
-      icon: Bell,
-      id: "notifications"
+      name: "Settings",
+      path: "/settings",
+      icon: Settings,
+      id: "settings"
     }
   ];
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-t dark:border-gray-800 sticky bottom-0 py-2 px-4 md:hidden z-10">
+    <nav className="bg-white dark:bg-gray-900 border-t dark:border-gray-800 fixed bottom-0 left-0 right-0 py-2 px-4 md:hidden z-50">
       <div className="flex justify-between items-center">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;

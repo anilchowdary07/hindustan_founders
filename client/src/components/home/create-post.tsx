@@ -1,13 +1,15 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Image as ImageIcon, PlayCircle, CalendarDays, FileText, X } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function CreatePost() {
   const { user } = useAuth();
@@ -17,6 +19,8 @@ export default function CreatePost() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   const createPostMutation = useMutation({
     mutationFn: async ({ content, image }: { content: string; image?: File }) => {
@@ -195,15 +199,35 @@ export default function CreatePost() {
             <ImageIcon className="mr-2 h-4 w-4 text-blue-500" />
             <span>Photo</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center text-gray-600">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center text-gray-600"
+            onClick={() => {
+              toast({
+                title: "Video upload",
+                description: "Video upload feature will be available soon",
+              });
+            }}
+          >
             <PlayCircle className="mr-2 h-4 w-4 text-green-500" />
             <span>Video</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center text-gray-600">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center text-gray-600"
+            onClick={() => navigate("/events")}
+          >
             <CalendarDays className="mr-2 h-4 w-4 text-orange-500" />
             <span>Event</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center text-gray-600">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center text-gray-600"
+            onClick={() => navigate("/articles")}
+          >
             <FileText className="mr-2 h-4 w-4 text-red-500" />
             <span>Article</span>
           </Button>

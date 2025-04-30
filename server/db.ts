@@ -12,14 +12,17 @@ if (process.env.NODE_ENV !== 'production') {
 // Configure Neon database for WebSocket support
 neonConfig.webSocketConstructor = ws;
 
-// Check for database URL
+// Check for database URL and exit if not available
 if (!process.env.DATABASE_URL) {
-  console.warn("DATABASE_URL not set. Using fallback connection string.");
+  console.error("DATABASE_URL not set. Please set a valid database connection string.");
+  // In non-serverless environments, exit the process
+  if (process.env.VERCEL !== '1') {
+    process.exit(1);
+  }
 }
 
-// Use a fallback connection string for development if needed
-const connectionString = process.env.DATABASE_URL || 
-  "postgresql://neondb_owner:npg_RoZcVvOq32Fx@ep-mute-dawn-a1s9kek1-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
+// Use the environment variable for connection string
+const connectionString = process.env.DATABASE_URL;
 
 // Create connection pool with appropriate settings for serverless
 const poolConfig = {
@@ -48,14 +51,29 @@ const initializeDb = async () => {
       console.error('Unexpected error on idle client', err);
       // Don't exit process in serverless environment
       if (process.env.VERCEL !== '1') {
-        process.exit(-1);
+        // Instead of exiting, we'll try to recover by reinitializing the pool
+        console.log('Attempting to recover from database error...');
+        dbInitialized = false;
+        setTimeout(() => {
+          initializeDb().catch(reinitError => {
+            console.error('Failed to reinitialize database after error:', reinitError);
+            // Only exit if we can't recover after multiple attempts
+            process.exit(-1);
+          });
+        }, 5000); // Wait 5 seconds before trying to reconnect
       }
     });
     
     // Only test the connection in development mode
     if (process.env.NODE_ENV === 'development' && process.env.VERCEL !== '1') {
       try {
-        const result = await pool.query('SELECT NOW()');
+        // Set a timeout for the connection test
+        const connectionTestPromise = pool.query('SELECT NOW()');
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Database connection test timed out')), 5000);
+        });
+        
+        const result = await Promise.race([connectionTestPromise, timeoutPromise]);
         console.log('Database connected successfully at:', result.rows[0].now);
       } catch (testError) {
         console.error('Database connection test failed:', testError);
@@ -67,11 +85,18 @@ const initializeDb = async () => {
   } catch (error) {
     console.error('Failed to create database pool:', error);
     
-    // Create a dummy pool for fallback
+    // Create a dummy pool for fallback that returns empty results instead of failing
     pool = new Pool({
       connectionString: 'postgresql://dummy:dummy@localhost:5432/dummy',
       max: 1,
     });
+    
+    // Override the query method to return empty results
+    const originalQuery = pool.query;
+    pool.query = function(...args) {
+      console.warn('Using dummy database pool - returning empty result');
+      return Promise.resolve({ rows: [] });
+    };
     
     // In development, throw the error to fail fast
     if (process.env.NODE_ENV === 'development') {

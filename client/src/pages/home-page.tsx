@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function HomePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("feed");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const { 
     data: posts, 
@@ -25,6 +26,13 @@ export default function HomePage() {
     queryKey: ["/api/posts"],
     enabled: !!user,
   });
+  
+  // Function to handle manual refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 1000); // Add a small delay for better UX
+  };
 
   useEffect(() => {
     if (user) {
@@ -75,10 +83,40 @@ export default function HomePage() {
         {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           <ProfileCard />
+          
+          {/* Quick Links Section */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="font-semibold mb-3">Quick Links</h3>
+            <div className="space-y-2">
+              <Button variant="ghost" className="w-full justify-start" asChild>
+                <a href="/pitch-room">Pitch Room</a>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" asChild>
+                <a href="/jobs">Job Board</a>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" asChild>
+                <a href="/network">Network</a>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" asChild>
+                <a href="/messages">Messages</a>
+              </Button>
+            </div>
+          </div>
         </div>
         
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Welcome, {user?.name?.split(' ')[0] || 'User'}!</h2>
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh} 
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
+          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-3 mb-4">
               <TabsTrigger value="feed">Feed</TabsTrigger>
@@ -108,10 +146,14 @@ export default function HomePage() {
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-gray-500 mb-2">Share documents with your network</p>
-                <Button className="w-full mb-2" variant="outline">
+                <Button className="w-full mb-2" variant="outline" onClick={() => {
+                  alert('Resume upload feature coming soon!');
+                }}>
                   Upload Resume
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full" variant="outline" onClick={() => {
+                  alert('Business Plan upload feature coming soon!');
+                }}>
                   Upload Business Plan
                 </Button>
               </div>
@@ -122,28 +164,64 @@ export default function HomePage() {
             <h3 className="font-semibold mb-3">People You May Know</h3>
             <div className="space-y-3">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center font-medium text-gray-600">RK</div>
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium">Raj Kumar</p>
                   <p className="text-xs text-gray-500">Founder, TechSolutions</p>
                 </div>
-                <Button size="sm" variant="outline">Connect</Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  alert('Connection request sent to Raj Kumar');
+                }}>
+                  Connect
+                </Button>
               </div>
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center font-medium text-gray-600">AP</div>
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium">Ananya Patel</p>
                   <p className="text-xs text-gray-500">Product Manager, InnoTech</p>
                 </div>
-                <Button size="sm" variant="outline">Connect</Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  alert('Connection request sent to Ananya Patel');
+                }}>
+                  Connect
+                </Button>
               </div>
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center font-medium text-gray-600">VS</div>
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium">Vikram Singh</p>
                   <p className="text-xs text-gray-500">Investor, VentureX</p>
                 </div>
-                <Button size="sm" variant="outline">Connect</Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  alert('Connection request sent to Vikram Singh');
+                }}>
+                  Connect
+                </Button>
+              </div>
+              <div className="mt-3 text-center">
+                <Button variant="link" size="sm" asChild>
+                  <a href="/network">View More Connections</a>
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="font-semibold mb-3">Upcoming Events</h3>
+            <div className="space-y-3">
+              <div className="border-l-2 border-primary pl-3">
+                <p className="text-sm font-medium">Startup India Summit 2025</p>
+                <p className="text-xs text-gray-500">May 15, 2025 • New Delhi</p>
+              </div>
+              <div className="border-l-2 border-primary pl-3">
+                <p className="text-sm font-medium">Venture Capital Masterclass</p>
+                <p className="text-xs text-gray-500">May 20, 2025 • Online</p>
+              </div>
+              <div className="mt-3 text-center">
+                <Button variant="link" size="sm" onClick={() => setActiveTab("events")}>
+                  View All Events
+                </Button>
               </div>
             </div>
           </div>

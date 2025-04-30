@@ -62,6 +62,9 @@ export default function NetworkPage() {
       return response.json();
     },
   });
+  
+  // State to track connection status for each user
+  const [connectionStatus, setConnectionStatus] = useState<Record<number, 'none' | 'pending' | 'connected'>>({});
 
   // Fetch connections (for the current user)
   const { data: connections, isLoading: isLoadingConnections } = useQuery({
@@ -190,19 +193,42 @@ export default function NetworkPage() {
                             {user.location}
                           </p>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex items-center gap-1"
+                        <Button
+                          size="sm"
                           onClick={() => {
-                            toast({
-                              title: "Connection request sent",
-                              description: `Request sent to ${user.name}`,
-                            });
+                            // Update connection status for this user
+                            setConnectionStatus(prev => ({
+                              ...prev,
+                              [user.id]: prev[user.id] === 'pending' ? 'none' : 'pending'
+                            }));
+                            
+                            // Show toast based on action
+                            if (connectionStatus[user.id] === 'pending') {
+                              toast({
+                                title: "Connection request cancelled",
+                                description: `Connection request to ${user.name} has been cancelled`,
+                                variant: "destructive"
+                              });
+                            } else {
+                              toast({
+                                title: "Connection request sent",
+                                description: `Connection request sent to ${user.name}`,
+                              });
+                            }
                           }}
+                          variant={connectionStatus[user.id] === 'pending' ? "destructive" : "default"}
                         >
-                          <UserPlus className="h-4 w-4" />
-                          Connect
+                          {connectionStatus[user.id] === 'pending' ? (
+                            <>
+                              <X className="h-4 w-4 mr-1" />
+                              Cancel
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Connect
+                            </>
+                          )}
                         </Button>
                       </div>
                     </CardContent>

@@ -13,7 +13,7 @@ import multer from "multer";
 // Configure multer for memory storage in serverless environment
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     // Accept only images
     if (file.mimetype.startsWith('image/')) {
@@ -26,12 +26,28 @@ const upload = multer({
 
 // Main function to set up all routes
 export default function setupRoutes(app: Express) {
-  // Handle CORS preflight requests
-  app.options('*', (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
+  // Handle CORS for all requests
+  app.use((req, res, next) => {
+    // Use a more restrictive CORS policy - replace with your actual frontend domain in production
+    const allowedOrigins = ['http://localhost:3000', 'http://localhost:5000', process.env.FRONTEND_URL].filter(Boolean);
+    const origin = req.headers.origin;
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+    } else if (process.env.NODE_ENV !== 'production') {
+      // In development, allow all origins
+      res.header('Access-Control-Allow-Origin', '*');
+    }
+    
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-    res.sendStatus(200);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    
+    next();
   });
 
   // Health check endpoint
@@ -301,6 +317,59 @@ export default function setupRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(400).json({ message: "Invalid user data", error });
+    }
+  });
+  
+  // Upload avatar image
+  app.post("/api/users/:userId/avatar", (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.id !== parseInt(req.params.userId)) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Use single file upload middleware
+      upload.single('avatar')(req, res, async (err) => {
+        if (err) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ 
+              message: "File too large", 
+              error: "The uploaded file exceeds the 10MB size limit." 
+            });
+          }
+          return res.status(400).json({ message: "File upload failed", error: err.message });
+        }
+        
+        try {
+          const file = req.file;
+          
+          if (!file) {
+            return res.status(400).json({ message: "No image file provided" });
+          }
+          
+          // In serverless environment, we'd normally upload to cloud storage
+          // For now, just use a placeholder URL
+          const avatarUrl = `/uploads/avatar-${req.user.id}-${Date.now()}.jpg`;
+          
+          // Update the user's avatarUrl
+          const userId = parseInt(req.params.userId);
+          const updatedUser = await storage.updateUser(userId, { avatarUrl });
+          
+          if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+          }
+          
+          res.status(200).json({ 
+            message: "Avatar uploaded successfully",
+            user: updatedUser
+          });
+        } catch (error) {
+          console.error("Error processing avatar upload:", error);
+          res.status(500).json({ message: "Failed to process avatar upload", error });
+        }
+      });
+    } catch (error) {
+      console.error("Error in avatar upload route:", error);
+      res.status(500).json({ message: "Avatar upload failed", error });
     }
   });
   

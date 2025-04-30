@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from "@/components/layout/layout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, Check, UserPlus, Star, Briefcase, MessageSquare } from "lucide-react";
+import { Bell, Check, UserPlus, Star, Briefcase, MessageSquare, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
 
 interface Notification {
   id: number;
@@ -19,7 +23,12 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  // Sample notifications for demonstration
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: 1,
@@ -89,6 +98,76 @@ export default function NotificationsPage() {
     },
   ]);
   
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      // In a real app, this would be an API call to fetch notifications
+      // For now, we'll just simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setIsLoading(false);
+      toast({
+        title: "Error",
+        description: "Failed to fetch notifications. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Refresh notifications
+  const refreshNotifications = async () => {
+    try {
+      setIsRefreshing(true);
+      // In a real app, this would be an API call to fetch fresh notifications
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Add a new notification at the top for demonstration
+      const newNotification: Notification = {
+        id: Date.now(),
+        type: 'message',
+        text: 'sent you a new message',
+        timestamp: new Date(),
+        read: false,
+        user: {
+          id: Math.floor(Math.random() * 100),
+          name: 'New User ' + Math.floor(Math.random() * 100),
+        }
+      };
+      
+      setNotifications([newNotification, ...notifications]);
+      setIsRefreshing(false);
+      
+      toast({
+        title: "Refreshed",
+        description: "Notifications updated successfully."
+      });
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+      setIsRefreshing(false);
+      toast({
+        title: "Error",
+        description: "Failed to refresh notifications. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Load notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+    // Set up polling for new notifications every 30 seconds
+    const interval = setInterval(() => {
+      if (!document.hidden) { // Only refresh if the page is visible
+        fetchNotifications();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
   const formatTime = (date: Date) => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -105,14 +184,41 @@ export default function NotificationsPage() {
     return date.toLocaleDateString();
   };
   
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      // In a real app, this would be an API call to mark all notifications as read
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+      
+      toast({
+        title: "Success",
+        description: "All notifications marked as read."
+      });
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notifications as read. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
+  const markAsRead = async (id: number) => {
+    try {
+      // In a real app, this would be an API call to mark a notification as read
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setNotifications(notifications.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      ));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   const getNotificationIcon = (type: string) => {
@@ -137,17 +243,35 @@ export default function NotificationsPage() {
   return (
     <Layout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold dark:text-white">Notifications</h1>
-        {unreadCount > 0 && (
+        <div className="flex items-center">
+          <h1 className="text-2xl font-bold dark:text-white mr-2">Notifications</h1>
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="ml-2">{unreadCount}</Badge>
+          )}
+        </div>
+        <div className="flex space-x-2">
           <Button 
             variant="outline"
-            onClick={markAllAsRead}
+            size="sm"
+            onClick={refreshNotifications}
+            disabled={isRefreshing}
             className="dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
           >
-            <Check className="h-4 w-4 mr-2" />
-            Mark all as read
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
-        )}
+          
+          {unreadCount > 0 && (
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={markAllAsRead}
+              className="dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <Check className="h-4 w-4 mr-2" /> Mark all as read
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">

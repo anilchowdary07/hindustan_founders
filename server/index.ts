@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { seedDatabase } from "./seed";
 
 const app = express();
 app.use(express.json());
@@ -37,31 +38,56 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Seed the database with initial data including admin user
+  await seedDatabase();
+  
   const server = await registerRoutes(app);
 
+  // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Get status code from error if available, default to 500
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    console.error(`Error: ${message}`);
-    res.status(status).json({ message });
-    // Don't throw the error after handling it
+    
+    // Log the error with stack trace in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`Error (${status}): ${message}`);
+      console.error(err.stack);
+    } else {
+      // In production, log less information
+      console.error(`Error (${status}): ${message}`);
+    }
+    
+    // Don't expose error details in production
+    const responseBody = {
+      message,
+      ...(process.env.NODE_ENV === 'development' ? { 
+        stack: err.stack,
+        details: err.details || err.data
+      } : {})
+    };
+    
+    res.status(status).json(responseBody);
   });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  
+  // importantly setup vite in development before the catch-all handler
+  // so the vite middleware can handle client-side routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
+  // Catch-all handler for undefined routes - this should be after Vite middleware
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({ message: "Resource not found" });
+  });
+
   // Use PORT environment variable if available, otherwise default to 5000
   const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
   
-  // Use a simpler server.listen call to avoid IPv6 issues
-  server.listen(port, "127.0.0.1", () => {
-    log(`Server running at http://127.0.0.1:${port}`);
+  // Listen on all interfaces to support various deployment environments
+  server.listen(port, () => {
+    log(`Server running on port ${port}`);
   });
 })();

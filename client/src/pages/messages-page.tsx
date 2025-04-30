@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from "@/components/layout/layout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, Search, UserPlus, Star, PhoneCall, Video, Info, MoreVertical, MessageSquare } from "lucide-react";
+import { Send, Search, UserPlus, Star, PhoneCall, Video, Info, MoreVertical, MessageSquare, Paperclip, Smile, Image as ImageIcon, FileText, Mic, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { apiRequest } from "@/lib/api";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 interface Message {
   id: number;
@@ -38,74 +46,20 @@ interface Conversation {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeConversation, setActiveConversation] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Sample conversations
-  const conversations: Conversation[] = [
-    {
-      id: 1,
-      user: {
-        id: 101,
-        name: "Vikram Malhotra",
-        status: 'online',
-      },
-      lastMessage: {
-        content: "Looking forward to our meeting tomorrow!",
-        timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-        isRead: false,
-      },
-      unreadCount: 2,
-    },
-    {
-      id: 2,
-      user: {
-        id: 102,
-        name: "Priya Sharma",
-        status: 'offline',
-        lastSeen: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-      },
-      lastMessage: {
-        content: "I'll review your pitch and get back to you",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-        isRead: true,
-      },
-      unreadCount: 0,
-    },
-    {
-      id: 3,
-      user: {
-        id: 103,
-        name: "Rahul Kapoor",
-        status: 'online',
-      },
-      lastMessage: {
-        content: "Have you considered raising capital from angel investors?",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-        isRead: true,
-      },
-      unreadCount: 0,
-    },
-    {
-      id: 4,
-      user: {
-        id: 104,
-        name: "Anjali Desai",
-        status: 'away',
-        lastSeen: new Date(Date.now() - 1000 * 60 * 15), // 15 min ago
-      },
-      lastMessage: {
-        content: "I'm interested in joining your startup as a tech lead",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        isRead: true,
-      },
-      unreadCount: 0,
-    },
-  ];
-
-  // Sample messages for each conversation
-  const messages: Record<number, Message[]> = {
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [newConversationOpen, setNewConversationOpen] = useState(false);
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [availableContacts, setAvailableContacts] = useState<Array<{id: number, name: string, avatarUrl?: string, role: string}>>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<number | null>(null);
+  
+  // Sample data for messages
+  const [messages, setMessages] = useState<Record<number, Message[]>>({
     1: [
       {
         id: 1,
@@ -233,120 +187,484 @@ export default function MessagesPage() {
         isCurrentUser: false,
       },
     ],
-  };
-
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-
-    if (diffSec < 60) return 'just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    if (diffHour < 24) return `${diffHour}h ago`;
-    if (diffDay < 7) return `${diffDay}d ago`;
-
-    return date.toLocaleDateString();
-  };
-
-  const handleSendMessage = () => {
-    if (newMessage.trim() && activeConversation) {
-      // In a real app, you would send this to an API
-      console.log(`Sending to conversation ${activeConversation}: ${newMessage}`);
-      setNewMessage("");
+  });
+  
+  // Sample data for conversations
+  const [conversations, setConversations] = useState<Conversation[]>([
+    {
+      id: 1,
+      user: {
+        id: 101,
+        name: "Vikram Malhotra",
+        status: 'online',
+      },
+      lastMessage: {
+        content: "Looking forward to our meeting tomorrow!",
+        timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
+        isRead: false,
+      },
+      unreadCount: 2,
+    },
+    {
+      id: 2,
+      user: {
+        id: 102,
+        name: "Priya Sharma",
+        status: 'offline',
+        lastSeen: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
+      },
+      lastMessage: {
+        content: "I'll review your pitch and get back to you",
+        timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
+        isRead: true,
+      },
+      unreadCount: 0,
+    },
+    {
+      id: 3,
+      user: {
+        id: 103,
+        name: "Rahul Kapoor",
+        status: 'online',
+      },
+      lastMessage: {
+        content: "Have you considered raising capital from angel investors?",
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+        isRead: true,
+      },
+      unreadCount: 0,
+    },
+    {
+      id: 4,
+      user: {
+        id: 104,
+        name: "Anjali Desai",
+        status: 'away',
+        lastSeen: new Date(Date.now() - 1000 * 60 * 15), // 15 min ago
+      },
+      lastMessage: {
+        content: "I'm interested in joining your startup as a tech lead",
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+        isRead: true,
+      },
+      unreadCount: 0,
+    },
+  ]);
+  
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, activeConversation]);
+  
+  useEffect(() => {
+    if (activeConversation) {
+      const randomDelay = Math.floor(Math.random() * 10000) + 3000; // Random delay between 3-13 seconds
+      const timer = setTimeout(() => {
+        setIsTyping(true);
+        
+        // Show typing for a random duration
+        const typingDuration = Math.floor(Math.random() * 3000) + 2000; // 2-5 seconds
+        setTimeout(() => {
+          setIsTyping(false);
+          
+          // Add a new message from the other user
+          const randomMessages = [
+            "That sounds great!",
+            "Let me think about it and get back to you.",
+            "Can we schedule a call to discuss this further?",
+            "I've shared some resources that might help.",
+            "What do you think about this approach?"
+          ];
+          
+          const randomIndex = Math.floor(Math.random() * randomMessages.length);
+          const newMsg = {
+            id: Math.max(...messages[activeConversation].map(m => m.id)) + 1,
+            content: randomMessages[randomIndex],
+            timestamp: new Date(),
+            sender: {
+              id: conversations.find(c => c.id === activeConversation)?.user.id || 0,
+              name: conversations.find(c => c.id === activeConversation)?.user.name || '',
+            },
+            isCurrentUser: false,
+          };
+          
+          setMessages(prev => ({
+            ...prev,
+            [activeConversation]: [...prev[activeConversation], newMsg]
+          }));
+          
+        }, typingDuration);
+      }, randomDelay);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [activeConversation, messages]);
+  
+  // Fetch available contacts for new conversations
+  useEffect(() => {
+    if (newConversationOpen) {
+      fetchAvailableContacts();
+    }
+  }, [newConversationOpen]);
+  
+  const fetchAvailableContacts = async () => {
+    setIsLoadingContacts(true);
+    try {
+      // In a real app, this would be an API call to get users you can message
+      // For now, we'll simulate it with a timeout
+      setTimeout(() => {
+        // Mock data for available contacts
+        const mockContacts = [
+          { id: 201, name: "Rajiv Kumar", role: "Founder", avatarUrl: "/avatars/rajiv.jpg" },
+          { id: 202, name: "Ananya Desai", role: "Investor", avatarUrl: "/avatars/ananya.jpg" },
+          { id: 203, name: "Sanjay Mehta", role: "Mentor", avatarUrl: "/avatars/sanjay.jpg" },
+          { id: 204, name: "Meera Patel", role: "Founder", avatarUrl: "/avatars/meera.jpg" },
+          { id: 205, name: "Arjun Singh", role: "Job Seeker", avatarUrl: "/avatars/arjun.jpg" },
+          { id: 206, name: "Neha Sharma", role: "Investor", avatarUrl: "/avatars/neha.jpg" },
+          { id: 207, name: "Kiran Rao", role: "Founder", avatarUrl: "/avatars/kiran.jpg" },
+          { id: 208, name: "Divya Kapoor", role: "Student", avatarUrl: "/avatars/divya.jpg" },
+        ];
+        setAvailableContacts(mockContacts);
+        setIsLoadingContacts(false);
+      }, 1000);
+      
+      // Real implementation would be:
+      // const response = await apiRequest('GET', '/api/users/available-contacts');
+      // const data = await response.json();
+      // setAvailableContacts(data);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load contacts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingContacts(false);
     }
   };
-
+  
+  const startNewConversation = () => {
+    if (!selectedContact) {
+      toast({
+        title: "Select a contact",
+        description: "Please select a contact to start a conversation with.",
+        variant: "default",
+      });
+      return;
+    }
+    
+    // Check if conversation already exists
+    const existingConversation = conversations.find(c => c.user.id === selectedContact);
+    
+    if (existingConversation) {
+      setActiveConversation(existingConversation.id);
+      setNewConversationOpen(false);
+      setSelectedContact(null);
+      return;
+    }
+    
+    // Find the selected contact details
+    const contact = availableContacts.find(c => c.id === selectedContact);
+    
+    if (!contact) return;
+    
+    // Create a new conversation
+    const newConversationId = Math.max(...conversations.map(c => c.id)) + 1;
+    
+    // Add to conversations list
+    const newConversationObj: Conversation = {
+      id: newConversationId,
+      user: {
+        id: contact.id,
+        name: contact.name,
+        avatarUrl: contact.avatarUrl,
+        status: 'online',
+        lastSeen: new Date(),
+      },
+      lastMessage: {
+        content: "New conversation started",
+        timestamp: new Date(),
+        isRead: true,
+      },
+      unreadCount: 0,
+    };
+    
+    // Add empty messages array for this conversation
+    setMessages(prev => ({
+      ...prev,
+      [newConversationId]: [],
+    }));
+    
+    // Add to conversations and set as active
+    setConversations(prev => [...prev, newConversationObj]);
+    setActiveConversation(newConversationId);
+    
+    // Close modal and reset
+    setNewConversationOpen(false);
+    setSelectedContact(null);
+    
+    toast({
+      title: "Conversation started",
+      description: `You can now chat with ${contact.name}`,
+    });
+  };
+  
+  // Handle sending a new message
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !activeConversation) return;
+    
+    // Create a new message
+    const newMsg = {
+      id: messages[activeConversation].length > 0 
+        ? Math.max(...messages[activeConversation].map(m => m.id)) + 1
+        : 1,
+      content: newMessage,
+      timestamp: new Date(),
+      sender: { id: user?.id || 0, name: user?.name || 'You' },
+      isCurrentUser: true,
+    };
+    
+    // Add to messages
+    setMessages(prev => ({
+      ...prev,
+      [activeConversation]: [...prev[activeConversation], newMsg]
+    }));
+    
+    // Update conversation
+    setConversations(prev => 
+      prev.map(convo => {
+        if (convo.id === activeConversation) {
+          return {
+            ...convo,
+            lastMessage: {
+              content: newMessage,
+              timestamp: new Date(),
+              isRead: true,
+            }
+          };
+        }
+        return convo;
+      })
+    );
+    
+    // Clear input
+    setNewMessage("");
+    
+    // In a real app, we would send the message to the server here
+    // Example:
+    // apiRequest('POST', '/api/messages', {
+    //   conversationId: activeConversation,
+    //   content: newMessage,
+    // }).then(response => {
+    //   if (!response.ok) {
+    //     toast({
+    //       title: "Error",
+    //       description: "Failed to send message. Please try again.",
+    //       variant: "destructive",
+    //     });
+    //   }
+    // }).catch(error => {
+    //   console.error("Error sending message:", error);
+    //   toast({
+    //     title: "Error",
+    //     description: "Failed to send message. Please try again.",
+    //     variant: "destructive",
+    //   });
+    // });
+    
+    // Simulate typing after a delay
+    setTimeout(() => {
+      setIsTyping(true);
+    }, 5000);
+  };
+  
+  // Format timestamp to readable time
+  const formatTime = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    // If less than 24 hours ago, show time
+    if (diff < 24 * 60 * 60 * 1000) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // If less than 7 days ago, show day of week
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+      return date.toLocaleDateString([], { weekday: 'short' }) + ' ' + 
+             date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Otherwise show date
+    return date.toLocaleDateString();
+  };
+  
+  // Filter conversations based on search term
   const filteredConversations = conversations.filter(convo => 
     convo.user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <Layout>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden h-[calc(100vh-12rem)]">
-        <div className="grid grid-cols-1 md:grid-cols-3 h-full">
-          {/* Conversation List */}
-          <div className="border-r dark:border-gray-700">
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex overflow-hidden">
+          {/* Sidebar */}
+          <div className="w-80 border-r dark:border-gray-700 flex flex-col">
             <div className="p-4 border-b dark:border-gray-700">
-              <h2 className="font-bold text-xl mb-3">Messages</h2>
+              <h2 className="text-lg font-semibold mb-2">Messages</h2>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input 
-                  placeholder="Search conversations" 
-                  className="pl-10"
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <Input
+                  type="search"
+                  placeholder="Search conversations..."
+                  className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
-            <div className="overflow-y-auto h-[calc(100%-5rem)]">
-              {filteredConversations.length > 0 ? (
-                filteredConversations.map(convo => (
-                  <div 
-                    key={convo.id}
-                    className={`p-4 border-b dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${activeConversation === convo.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
-                    onClick={() => setActiveConversation(convo.id)}
-                  >
-                    <div className="flex items-start">
+            
+            <Tabs defaultValue="all" className="flex-1 flex flex-col">
+              <div className="px-4 pt-2">
+                <TabsList className="w-full">
+                  <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+                  <TabsTrigger value="unread" className="flex-1">Unread</TabsTrigger>
+                  <TabsTrigger value="starred" className="flex-1">Starred</TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="all" className="flex-1 overflow-y-auto p-2">
+                {filteredConversations.length > 0 ? (
+                  filteredConversations.map((convo) => (
+                    <div 
+                      key={convo.id}
+                      className={`flex items-center p-2 rounded-lg cursor-pointer mb-1 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                        activeConversation === convo.id ? 'bg-gray-100 dark:bg-gray-800' : ''
+                      }`}
+                      onClick={() => setActiveConversation(convo.id)}
+                    >
                       <div className="relative">
-                        <Avatar>
+                        <Avatar className="h-10 w-10">
                           <AvatarFallback>{convo.user.name.charAt(0)}</AvatarFallback>
                           {convo.user.avatarUrl && <AvatarImage src={convo.user.avatarUrl} />}
                         </Avatar>
                         <span 
-                          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
-                            convo.user.status === 'online' ? 'bg-green-500' : 
-                            convo.user.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
+                          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
+                            convo.user.status === 'online' 
+                              ? 'bg-green-500' 
+                              : convo.user.status === 'away' 
+                                ? 'bg-yellow-500' 
+                                : 'bg-gray-400'
                           }`}
                         />
                       </div>
                       <div className="ml-3 flex-1 overflow-hidden">
-                        <div className="flex justify-between">
-                          <h3 className="font-medium text-sm">{convo.user.name}</h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">{formatTime(convo.lastMessage.timestamp)}</span>
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-sm font-medium truncate">{convo.user.name}</h3>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTime(convo.lastMessage.timestamp)}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{convo.lastMessage.content}</p>
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {convo.lastMessage.content}
+                          </p>
+                          {convo.unreadCount > 0 && (
+                            <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full">
+                              {convo.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      {convo.unreadCount > 0 && (
-                        <div className="ml-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                          <span className="text-xs text-white">{convo.unreadCount}</span>
-                        </div>
-                      )}
                     </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    No conversations found
                   </div>
-                ))
-              ) : (
+                )}
+              </TabsContent>
+              
+              <TabsContent value="unread" className="flex-1 overflow-y-auto p-2">
+                {filteredConversations.filter(c => c.unreadCount > 0).length > 0 ? (
+                  filteredConversations
+                    .filter(c => c.unreadCount > 0)
+                    .map((convo) => (
+                      <div 
+                        key={convo.id}
+                        className={`flex items-center p-2 rounded-lg cursor-pointer mb-1 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                          activeConversation === convo.id ? 'bg-gray-100 dark:bg-gray-800' : ''
+                        }`}
+                        onClick={() => setActiveConversation(convo.id)}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>{convo.user.name.charAt(0)}</AvatarFallback>
+                          {convo.user.avatarUrl && <AvatarImage src={convo.user.avatarUrl} />}
+                        </Avatar>
+                        <div className="ml-3 flex-1 overflow-hidden">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-sm font-medium truncate">{convo.user.name}</h3>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatTime(convo.lastMessage.timestamp)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {convo.lastMessage.content}
+                            </p>
+                            <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full">
+                              {convo.unreadCount}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    No unread messages
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="starred" className="flex-1 overflow-y-auto p-2">
                 <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                  No conversations found
+                  No starred conversations yet
                 </div>
-              )}
+              </TabsContent>
+            </Tabs>
+            
+            <div className="p-4 border-t dark:border-gray-700">
+              <Button className="w-full">
+                <UserPlus className="h-4 w-4 mr-2" />
+                New Conversation
+              </Button>
             </div>
           </div>
-
-          {/* Message Area */}
-          <div className="col-span-2 flex flex-col">
+          
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col">
             {activeConversation ? (
               <>
-                {/* Conversation Header */}
-                <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                {/* Chat Header */}
+                <div className="p-3 border-b dark:border-gray-700 flex justify-between items-center">
                   <div className="flex items-center">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-9 w-9">
                       <AvatarFallback>
-                        {conversations.find(c => c.id === activeConversation)?.user.name.charAt(0) || '?'}
+                        {conversations.find(c => c.id === activeConversation)?.user.name.charAt(0)}
                       </AvatarFallback>
                       {conversations.find(c => c.id === activeConversation)?.user.avatarUrl && (
-                        <AvatarImage src={conversations.find(c => c.id === activeConversation)?.user.avatarUrl || ''} />
+                        <AvatarImage src={conversations.find(c => c.id === activeConversation)?.user.avatarUrl} />
                       )}
                     </Avatar>
                     <div className="ml-3">
-                      <h3 className="font-medium">
+                      <h3 className="text-sm font-medium">
                         {conversations.find(c => c.id === activeConversation)?.user.name}
                       </h3>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {conversations.find(c => c.id === activeConversation)?.user.status === 'online' 
-                          ? 'Online' 
+                        {conversations.find(c => c.id === activeConversation)?.user.status === 'online'
+                          ? 'Online'
                           : conversations.find(c => c.id === activeConversation)?.user.status === 'away'
                             ? 'Away'
                             : 'Offline'}
@@ -396,6 +714,26 @@ export default function MessagesPage() {
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Typing indicator */}
+                  {isTyping && (
+                    <div className="flex justify-start">
+                      <Avatar className="h-8 w-8 mt-1 mr-2">
+                        <AvatarFallback>
+                          {conversations.find(c => c.id === activeConversation)?.user.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-2 px-3 rounded-bl-none">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '200ms' }}></div>
+                          <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '400ms' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Message Input */}
@@ -425,7 +763,7 @@ export default function MessagesPage() {
                 <p className="text-gray-500 dark:text-gray-400 max-w-md mb-4">
                   Connect with founders, investors, and professionals in the startup ecosystem. Select a conversation to start messaging.
                 </p>
-                <Button>
+                <Button onClick={() => setNewConversationOpen(true)}>
                   <UserPlus className="h-4 w-4 mr-2" />
                   Start New Conversation
                 </Button>
@@ -434,6 +772,83 @@ export default function MessagesPage() {
           </div>
         </div>
       </div>
+      
+      {/* New Conversation Dialog */}
+      <Dialog open={newConversationOpen} onOpenChange={setNewConversationOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start New Conversation</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex items-center space-x-2 my-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search contacts..."
+                className="pl-8"
+                value={contactSearchTerm}
+                onChange={(e) => setContactSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <ScrollArea className="h-72 rounded-md border p-2">
+            {isLoadingContacts ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {availableContacts
+                  .filter(contact => 
+                    contact.name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+                    contact.role.toLowerCase().includes(contactSearchTerm.toLowerCase())
+                  )
+                  .map(contact => (
+                    <div 
+                      key={contact.id}
+                      className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${selectedContact === contact.id ? 'bg-primary/10' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                      onClick={() => setSelectedContact(contact.id)}
+                    >
+                      <Avatar className="h-10 w-10 mr-3">
+                        <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                        {contact.avatarUrl && <AvatarImage src={contact.avatarUrl} />}
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">{contact.name}</p>
+                        <p className="text-sm text-gray-500">{contact.role}</p>
+                      </div>
+                      {selectedContact === contact.id && (
+                        <Badge variant="outline" className="ml-auto bg-primary/20 text-primary border-primary/30">
+                          Selected
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                  
+                {availableContacts.filter(contact => 
+                  contact.name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+                  contact.role.toLowerCase().includes(contactSearchTerm.toLowerCase())
+                ).length === 0 && (
+                  <div className="text-center py-4 text-gray-500">
+                    No contacts found matching your search
+                  </div>
+                )}
+              </div>
+            )}
+          </ScrollArea>
+          
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button variant="outline" onClick={() => setNewConversationOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={startNewConversation} disabled={!selectedContact || isLoadingContacts}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Start Conversation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

@@ -18,6 +18,7 @@ import NetworkPage from "@/pages/network-page";
 import SettingsPage from "@/pages/settings-page";
 import NotificationsPage from "@/pages/notifications-page";
 import MessagesPage from "@/pages/messages-page";
+import AdminDashboard from "@/pages/admin-dashboard";
 import ChatSidebar from "@/components/chat/chat-sidebar";
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -32,6 +33,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/notifications" component={NotificationsPage} />
       <ProtectedRoute path="/messages" component={MessagesPage} />
+      <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} />
       <ProtectedRoute path="/pitch-room" component={PitchRoomPage} />
       <ProtectedRoute path="/jobs/create" component={CreateJobPage} />
       <Route path="/jobs/:jobId" component={JobDetailPage} />

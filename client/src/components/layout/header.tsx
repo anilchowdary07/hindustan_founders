@@ -46,7 +46,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-primary text-white p-4 shadow-md sticky top-0 z-10">
+    <header className="bg-primary text-white p-4 shadow-md fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center">
           <Link href="/">
@@ -66,11 +66,14 @@ export default function Header() {
             <Link href="/network">
               <div className="text-white hover:text-blue-200 cursor-pointer">Network</div>
             </Link>
-            <Link href="/jobs">
-              <div className="text-white hover:text-blue-200 cursor-pointer">Jobs</div>
-            </Link>
             <Link href="/pitch-room">
               <div className="text-white hover:text-blue-200 cursor-pointer">Pitch Room</div>
+            </Link>
+            <Link href="/messages">
+              <div className="text-white hover:text-blue-200 cursor-pointer">Chats</div>
+            </Link>
+            <Link href="/settings">
+              <div className="text-white hover:text-blue-200 cursor-pointer">Settings</div>
             </Link>
           </div>
         </div>
@@ -124,7 +127,7 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="p-1 h-auto">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatarUrl || ""} />
+                  <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
                   <AvatarFallback className="bg-blue-600">{getInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -145,6 +148,12 @@ export default function Header() {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
+              {user.role === "admin" && (
+                <DropdownMenuItem onClick={() => navigate("/admin-dashboard")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Admin Dashboard</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />

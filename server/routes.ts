@@ -2,6 +2,7 @@ import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import adminRouter from "./admin-routes";
 import { 
   insertPostSchema, 
   insertPitchSchema, 
@@ -40,7 +41,7 @@ const storage_config = isVercel
 
 const upload = multer({ 
   storage: storage_config,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     // Accept only images
     if (file.mimetype.startsWith('image/')) {
@@ -54,6 +55,9 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+  
+  // Register admin routes
+  app.use("/api/admin", adminRouter);
 
   // Serve static files from uploads directory
   if (!isVercel) {
@@ -335,6 +339,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Upload avatar image
+  app.post("/api/users/:userId/avatar", (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.id !== parseInt(req.params.userId)) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Use single file upload middleware
+      upload.single('avatar')(req, res, async (err) => {
+        if (err) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ 
+              message: "File too large", 
+              error: "The uploaded file exceeds the 10MB size limit." 
+            });
+          }
+          return res.status(400).json({ message: "File upload failed", error: err.message });
+        }
+        
+        try {
+          const file = req.file;
+          
+          if (!file) {
+            return res.status(400).json({ message: "No image file provided" });
+          }
+          
+          // In serverless environment, we'd upload to cloud storage
+          // For now, just use a placeholder or local path
+          let avatarUrl;
+          
+          if (process.env.VERCEL === '1') {
+            // In serverless, we'd return a placeholder or upload to cloud storage
+            avatarUrl = `/uploads/avatar-${req.user.id}-${Date.now()}.jpg`;
+          } else {
+            // In local environment, use the actual file path
+            avatarUrl = `/uploads/${file.filename}`;
+          }
+          
+          // Update the user's avatarUrl
+          const userId = parseInt(req.params.userId);
+          const updatedUser = await storage.updateUser(userId, { avatarUrl });
+          
+          if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+          }
+          
+          res.status(200).json({ 
+            message: "Avatar uploaded successfully",
+            user: updatedUser
+          });
+        } catch (error) {
+          console.error("Error processing avatar upload:", error);
+          res.status(500).json({ message: "Failed to process avatar upload", error });
+        }
+      });
+    } catch (error) {
+      console.error("Error in avatar upload route:", error);
+      res.status(500).json({ message: "Avatar upload failed", error });
+    }
+  });
+  
   // Connection routes - placeholder for future implementation
   app.get("/api/connections", (req, res) => {
     if (!req.isAuthenticated()) {
@@ -598,7 +663,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Call the seed function after startup with a longer delay to ensure DB is ready
-  setTimeout(seedInitialData, 3000);
+  // Only seed data in development environment
+  if (process.env.NODE_ENV !== 'production') {
+    setTimeout(() => {
+      try {
+        seedInitialData().catch(err => {
+          console.error("Failed to seed initial data:", err);
+        });
+      } catch (error) {
+        console.error("Unexpected error during seed data initialization:", error);
+        // Don't let seeding errors crash the server
+      }
+    }, 3000);
+  }
 
   const httpServer = createServer(app);
   return httpServer;

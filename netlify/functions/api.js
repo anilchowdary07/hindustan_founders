@@ -1,13 +1,13 @@
-// netlify/functions/api.js
-import express from 'express';
-import serverless from 'serverless-http';
-import session from 'express-session';
-import createMemoryStore from 'memorystore';
-import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
-import dotenv from 'dotenv';
-import { createHash } from 'crypto';
-import cookieParser from 'cookie-parser';
+// netlify/functions/api.js - Converted to CommonJS for compatibility
+const express = require('express');
+const serverless = require('serverless-http');
+const session = require('express-session');
+const createMemoryStore = require('memorystore');
+const passport = require('passport');
+const { Strategy: LocalStrategy } = require('passport-local');
+const dotenv = require('dotenv');
+const crypto = require('crypto');
+const cookieParser = require('cookie-parser');
 
 // Load environment variables
 dotenv.config();
@@ -387,14 +387,13 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// Export the serverless function
-// Create the serverless handler
-const handler = serverless(app, {
+// Create the serverless handler using CommonJS syntax
+const serverlessHandler = serverless(app, {
   binary: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'application/pdf'],
 });
 
-// Export the handler with extra debugging
-export async function handler(event, context) {
+// Export the handler using CommonJS module.exports
+module.exports.handler = async (event, context) => {
   console.log('Netlify function invoked with event:', {
     path: event.path,
     httpMethod: event.httpMethod,
@@ -403,7 +402,7 @@ export async function handler(event, context) {
   
   try {
     // Call the serverless-http handler
-    return await handler(event, context);
+    return await serverlessHandler(event, context);
   } catch (error) {
     console.error('Error in Netlify function:', error);
     return {

@@ -128,8 +128,24 @@ passport.deserializeUser((id, done) => {
   done(null, user || null);
 });
 
-// API Routes
+// Get the base path from the request URL
+const getBasePath = (req) => {
+  // Extract the base path from the URL
+  const path = req.path || req.url;
+  console.log('Original request path:', path);
+  
+  // If the path contains /.netlify/functions/api, remove it
+  // This handles both direct API calls and calls through Netlify functions
+  if (path.includes('/.netlify/functions/api')) {
+    return path.replace('/.netlify/functions/api', '');
+  }
+  
+  return path;
+};
+
+// API Routes - using actual path without the Netlify prefix
 app.post('/login', (req, res, next) => {
+  console.log('Login endpoint hit with path:', req.path || req.url);
   console.log('Login request received:', req.body);
   
   if (!req.body.username || !req.body.password) {
@@ -202,6 +218,18 @@ app.post('/register', (req, res) => {
     console.log('Registration successful for:', userWithoutPassword.username);
     res.status(201).json(userWithoutPassword);
   });
+});
+
+// Fix all other routes to handle base path correctly
+app.use((req, res, next) => {
+  // Get the base path from the URL (removing Netlify function prefix)
+  const basePath = getBasePath(req);
+  console.log(`Processing request: ${req.method} ${basePath}`);
+  
+  // If we haven't handled this request yet, it's likely because of the path prefix
+  // Adjust the URL for proper routing
+  req.url = basePath;
+  next();
 });
 
 app.get('/user', (req, res) => {

@@ -12,8 +12,19 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Ensure URL is absolute for Vercel deployment
-  const apiUrl = url.startsWith('http') ? url : window.location.origin + url;
+  // Adjust URL for Netlify Functions
+  let apiUrl = url;
+  if (url.startsWith('/api/')) {
+    // Convert /api/xyz to /.netlify/functions/api/xyz for Netlify deployment
+    apiUrl = url.replace(/^\/api/, '/.netlify/functions/api');
+  }
+  
+  // Ensure URL is absolute
+  if (!apiUrl.startsWith('http')) {
+    apiUrl = window.location.origin + apiUrl;
+  }
+  
+  console.log(`Making API request to: ${apiUrl}`);
   
   const res = await fetch(apiUrl, {
     method,
@@ -37,9 +48,22 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Ensure URL is absolute for Vercel deployment
+    // Get the URL from the query key
     const url = queryKey[0] as string;
-    const apiUrl = url.startsWith('http') ? url : window.location.origin + url;
+    
+    // Adjust URL for Netlify Functions
+    let apiUrl = url;
+    if (url.startsWith('/api/')) {
+      // Convert /api/xyz to /.netlify/functions/api/xyz for Netlify deployment
+      apiUrl = url.replace(/^\/api/, '/.netlify/functions/api');
+    }
+    
+    // Ensure URL is absolute
+    if (!apiUrl.startsWith('http')) {
+      apiUrl = window.location.origin + apiUrl;
+    }
+    
+    console.log(`Making query request to: ${apiUrl}`);
     
     const res = await fetch(apiUrl, {
       credentials: "include",

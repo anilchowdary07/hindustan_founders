@@ -6,6 +6,9 @@ import session from 'express-session';
 import createMemoryStore from 'memorystore';
 import fs from 'fs';
 import path from 'path';
+import cookieParser from 'cookie-parser';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { createHash } from 'crypto';
 
 // Load environment variables
 dotenv.config();
@@ -101,9 +104,11 @@ const handler = async (req, res) => {
           });
         });
         
-        // Create serverless handler
-        console.log('Creating serverless handler...');
-        serverlessHandler = serverless(app);
+        // Create serverless handler for Vercel with proper ES module export
+        serverlessHandler = serverless(app, {
+          binary: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'application/pdf']
+        });
+        
         console.log('API initialization complete');
       } catch (initError) {
         console.error('Failed to initialize API:', initError);

@@ -7,6 +7,7 @@ const passport = require('passport');
 const { Strategy: LocalStrategy } = require('passport-local');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
+const { createHash } = crypto;
 const cookieParser = require('cookie-parser');
 
 // Load environment variables

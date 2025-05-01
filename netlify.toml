@@ -1,7 +1,7 @@
 [build]
   command = "npm run build"
   functions = "netlify/functions"
-  publish = "dist/public"
+  publish = "dist"
 
 # This redirect is needed for a Single Page Application
 [[redirects]]

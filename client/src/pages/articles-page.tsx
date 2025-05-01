@@ -7,8 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Filter, BookmarkCheck } from "lucide-react";
-import { Link } from "wouter";
+import { Search, Filter, BookmarkCheck, PlusCircle } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -144,6 +144,7 @@ const categories = [
 ];
 
 export default function ArticlesPage() {
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [sortBy, setSortBy] = useState("recent");
@@ -205,11 +206,13 @@ export default function ArticlesPage() {
           </div>
           
           <div className="mt-4 md:mt-0">
-            <Button variant="outline" className="mr-2">
+            <Button 
+              variant="outline" 
+              className="mr-2"
+              onClick={() => navigate("/create-article")}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
               Write an Article
-            </Button>
-            <Button>
-              Submit for Review
             </Button>
           </div>
         </div>

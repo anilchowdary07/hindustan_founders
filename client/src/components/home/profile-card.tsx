@@ -53,61 +53,129 @@ export default function ProfileCard() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden md:col-span-1">
-      <div className="h-24 bg-gradient-to-r from-primary to-blue-700"></div>
-      <div className="px-4 pt-0 pb-4 relative">
-        <div className="absolute -top-10 left-4">
-          <Avatar className="h-20 w-20 border-4 border-white">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden md:col-span-1 hover:shadow-md transition-shadow">
+      {/* Cover photo */}
+      <div className="h-24 bg-gradient-to-r from-primary to-blue-600 relative">
+        <div className="absolute inset-0 opacity-20 bg-[url('/patterns/dot-pattern.png')] bg-repeat"></div>
+      </div>
+      
+      {/* Profile content */}
+      <div className="px-4 py-4">
+        {/* Avatar section - positioned at the top center */}
+        <div className="flex justify-center -mt-12 mb-4">
+          <Avatar className="h-20 w-20 border-4 border-white shadow-md">
             <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
-            <AvatarFallback className="bg-primary text-white text-xl">{getInitials()}</AvatarFallback>
+            <AvatarFallback className="bg-gradient-to-br from-primary to-blue-600 text-white text-lg">
+              {getInitials()}
+            </AvatarFallback>
           </Avatar>
         </div>
-        <div className="mt-12">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-xl font-bold">{user.name}</h2>
-              <div className="text-sm font-bold text-primary mt-1">{getRoleDisplay()}</div>
-              <p className="text-gray-600 mt-1">{user.company || ""}</p>
-            </div>
-            <Link href="/profile">
-              <Button variant="ghost" className="text-primary">Edit</Button>
+        
+        {/* Name and basic info - centered */}
+        <div className="text-center mb-4">
+          <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
+          <div className="text-sm font-bold text-primary mt-1 flex items-center justify-center flex-wrap">
+            <Badge className="mx-1 mb-1 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors">
+              {getRoleDisplay()}
+            </Badge>
+            <Badge variant="outline" className="mx-1 mb-1 bg-blue-50 text-blue-600 border-blue-200">
+              Verified
+            </Badge>
+          </div>
+          <p className="text-gray-600 mt-1">{user.company || ""}</p>
+        </div>
+        
+        {/* Edit profile button */}
+        <div className="flex justify-center mb-4">
+          <Link href="/profile">
+            <Button variant="outline" size="sm" className="text-primary border-primary/30 hover:bg-primary/10 hover:text-primary transition-colors">
+              Edit Profile
+            </Button>
+          </Link>
+        </div>
+          
+        {/* Bio section */}
+        <div className="border-t border-gray-100 pt-4">
+          <p className="text-gray-700 text-sm leading-relaxed">
+            {user.bio || "Complete your profile by adding a professional bio to help others understand your expertise and interests."}
+          </p>
+        </div>
+        
+        {/* Profile strength section */}
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium text-gray-800">Profile strength</h3>
+            <Badge variant="outline" className={`${
+              profileStrength >= 80 
+                ? 'bg-green-50 text-green-700 border-green-200' 
+                : profileStrength >= 50 
+                  ? 'bg-yellow-50 text-yellow-700 border-yellow-200' 
+                  : 'bg-red-50 text-red-700 border-red-200'
+            }`}>
+              {profileStrength}%
+            </Badge>
+          </div>
+          <Progress 
+            value={profileStrength} 
+            className="mt-2 h-2" 
+            indicatorClassName={`${
+              profileStrength >= 80 
+                ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                : profileStrength >= 50 
+                  ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' 
+                  : 'bg-gradient-to-r from-red-500 to-red-600'
+            }`}
+          />
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-gray-500">
+              {profileStrength < 100 ? 'Complete more steps to improve your profile' : 'Your profile is complete!'}
+            </p>
+            <Link href="/settings">
+              <Button variant="link" size="sm" className="text-xs p-0 h-auto text-primary hover:text-primary/80 transition-colors">
+                Improve
+              </Button>
             </Link>
           </div>
-          
-          <p className="mt-4 text-gray-700">{user.bio || "Complete your profile by adding a bio."}</p>
-          
-          <div className="mt-6">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium text-gray-800">Profile strength</h3>
-              <Badge variant="outline" className={`${profileStrength >= 80 ? 'bg-green-50 text-green-700' : profileStrength >= 50 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
-                {profileStrength}%
-              </Badge>
-            </div>
-            <Progress value={profileStrength} className="mt-2" />
-            <div className="flex justify-between mt-1">
-              <p className="text-xs text-gray-500">
-                {profileStrength < 100 ? 'Complete more steps to improve your profile' : 'Your profile is complete!'}
-              </p>
-              <Link href="/settings">
-                <Button variant="link" size="sm" className="text-xs p-0 h-auto">Improve</Button>
-              </Link>
-            </div>
-          </div>
-          
-          {/* Profile completion suggestions */}
-          {profileStrength < 100 && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100">
+        </div>
+        
+        {/* Profile completion suggestions */}
+        {profileStrength < 100 && (
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md border border-blue-100">
               <h4 className="text-sm font-medium text-blue-800 mb-2">Suggested actions:</h4>
-              <ul className="text-xs text-blue-700 space-y-1">
-                {!user.bio && <li>• Add a professional bio</li>}
-                {!user.avatarUrl && <li>• Upload a profile picture</li>}
-                {!user.location && <li>• Add your location</li>}
-                {!user.company && <li>• Add your company</li>}
-                <li>• Connect with more professionals</li>
+              <ul className="text-xs text-blue-700 space-y-2">
+                {!user.bio && (
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
+                    <span>Add a professional bio</span>
+                  </li>
+                )}
+                {!user.avatarUrl && (
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
+                    <span>Upload a profile picture</span>
+                  </li>
+                )}
+                {!user.location && (
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
+                    <span>Add your location</span>
+                  </li>
+                )}
+                {!user.company && (
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
+                    <span>Add your company</span>
+                  </li>
+                )}
+                <li className="flex items-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
+                  <span>Connect with more professionals</span>
+                </li>
               </ul>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

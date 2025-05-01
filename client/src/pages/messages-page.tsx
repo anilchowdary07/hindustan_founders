@@ -418,7 +418,7 @@ export default function MessagesPage() {
     
     // Create a new message
     const newMsg = {
-      id: messages[activeConversation].length > 0 
+      id: messages[activeConversation]?.length > 0 
         ? Math.max(...messages[activeConversation].map(m => m.id)) + 1
         : 1,
       content: newMessage,
@@ -428,10 +428,15 @@ export default function MessagesPage() {
     };
     
     // Add to messages
-    setMessages(prev => ({
-      ...prev,
-      [activeConversation]: [...prev[activeConversation], newMsg]
-    }));
+    setMessages(prev => {
+      // Initialize the conversation array if it doesn't exist
+      const conversationMessages = prev[activeConversation] || [];
+      
+      return {
+        ...prev,
+        [activeConversation]: [...conversationMessages, newMsg]
+      };
+    });
     
     // Update conversation
     setConversations(prev => 
@@ -443,7 +448,8 @@ export default function MessagesPage() {
               content: newMessage,
               timestamp: new Date(),
               isRead: true,
-            }
+            },
+            unreadCount: 0 // Reset unread count for this conversation
           };
         }
         return convo;
@@ -452,6 +458,12 @@ export default function MessagesPage() {
     
     // Clear input
     setNewMessage("");
+    
+    // Show toast confirmation
+    toast({
+      title: "Message sent",
+      description: "Your message has been sent successfully",
+    });
     
     // In a real app, we would send the message to the server here
     // Example:

@@ -51,6 +51,15 @@ export default function PitchRoomPage() {
     error,
   } = useQuery({
     queryKey: ["/api/pitches", { status: activeTab }],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/pitches");
+        return await res.json();
+      } catch (err) {
+        console.error("Error fetching pitches:", err);
+        return [];
+      }
+    }
   });
   
   const createPitchMutation = useMutation({

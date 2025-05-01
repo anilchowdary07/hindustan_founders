@@ -120,57 +120,59 @@ export default function CreatePost() {
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
       <CardContent className="p-4">
         <div className="flex">
-          <Avatar className="h-12 w-12">
+          <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
             <AvatarImage src={user.avatarUrl || ""} />
-            <AvatarFallback className="bg-primary text-white">{getInitials()}</AvatarFallback>
+            <AvatarFallback className="bg-gradient-to-br from-primary to-blue-600 text-white">{getInitials()}</AvatarFallback>
           </Avatar>
           
           {!isExpanded ? (
             <button 
-              className="flex-1 ml-3 px-4 py-2 bg-gray-100 text-gray-500 rounded-full text-left hover:bg-gray-200"
+              className="flex-1 ml-3 px-4 py-2 bg-gray-50 text-gray-500 rounded-full text-left hover:bg-gray-100 border border-gray-200 shadow-sm transition-all"
               onClick={() => setIsExpanded(true)}
             >
-              Start a post
+              What's on your mind, {user.name?.split(' ')[0]}?
             </button>
           ) : (
             <div className="flex-1 ml-3">
               <Textarea
-                placeholder="What's on your mind?"
-                className="w-full resize-none"
+                placeholder={`Share your thoughts, ideas, or questions with the community...`}
+                className="w-full resize-none focus:ring-primary focus:border-primary"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={4}
               />
               
               {imagePreview && (
-                <div className="relative mt-2 inline-block">
+                <div className="relative mt-2 inline-block group">
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
-                    className="max-h-60 max-w-full rounded-md" 
+                    className="max-h-60 max-w-full rounded-md border border-gray-200 shadow-sm" 
                   />
                   <button 
                     onClick={removeImage}
-                    className="absolute top-2 right-2 bg-gray-800 bg-opacity-70 rounded-full p-1 text-white hover:bg-opacity-100"
+                    className="absolute top-2 right-2 bg-gray-800 bg-opacity-70 rounded-full p-1.5 text-white hover:bg-opacity-100 opacity-80 group-hover:opacity-100 transition-opacity"
                   >
                     <X size={16} />
                   </button>
                 </div>
               )}
               
-              <div className="flex justify-end gap-2 mt-2">
+              <div className="flex justify-end gap-2 mt-3">
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   onClick={resetForm}
+                  className="hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </Button>
                 <Button 
                   disabled={!content.trim() || createPostMutation.isPending} 
                   onClick={handleSubmit}
+                  className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 transition-all"
                 >
                   {createPostMutation.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -182,7 +184,7 @@ export default function CreatePost() {
           )}
         </div>
         
-        <div className="flex justify-between mt-3">
+        <div className="flex justify-between mt-3 border-t pt-3">
           <input
             type="file"
             accept="image/*"
@@ -193,7 +195,7 @@ export default function CreatePost() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center text-gray-600"
+            className="flex items-center text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors"
             onClick={() => fileInputRef.current?.click()}
           >
             <ImageIcon className="mr-2 h-4 w-4 text-blue-500" />
@@ -202,8 +204,9 @@ export default function CreatePost() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center text-gray-600"
+            className="flex items-center text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors"
             onClick={() => {
+              setIsExpanded(true);
               toast({
                 title: "Video upload",
                 description: "Video upload feature will be available soon",
@@ -216,8 +219,15 @@ export default function CreatePost() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center text-gray-600"
-            onClick={() => navigate("/events")}
+            className="flex items-center text-gray-600 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+            onClick={() => {
+              navigate("/create-event");
+              
+              toast({
+                title: "Create Event",
+                description: "Redirected to event creation page",
+              });
+            }}
           >
             <CalendarDays className="mr-2 h-4 w-4 text-orange-500" />
             <span>Event</span>
@@ -225,8 +235,15 @@ export default function CreatePost() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center text-gray-600"
-            onClick={() => navigate("/articles")}
+            className="flex items-center text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+            onClick={() => {
+              navigate("/create-article");
+              
+              toast({
+                title: "Create Article",
+                description: "Redirected to article creation page",
+              });
+            }}
           >
             <FileText className="mr-2 h-4 w-4 text-red-500" />
             <span>Article</span>

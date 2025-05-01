@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
@@ -6,15 +6,25 @@ import { Button } from "@/components/ui/button";
 import { 
   Search, 
   Bell, 
-  MessageCircle,
+  MessageSquare,
   User,
   LogOut,
   Settings,
-  Menu
+  Home,
+  Users,
+  Briefcase,
+  Grid,
+  ChevronDown,
+  Menu,
+  PlusCircle,
+  FileText,
+  Calendar,
+  BarChart2,
+  HelpCircle
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LeafIcon } from "../ui/leaf-icon";
+import { LeafIcon } from "@/components/ui/leaf-icon";
+import MobileSidebar from "./mobile-sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +32,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   if (!user) return null;
 
@@ -44,125 +60,259 @@ export default function Header() {
   const handleLogout = () => {
     logoutMutation.mutate();
   };
+  
+  const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen(!isMobileSidebarOpen);
+  };
+  
+  const closeMobileSidebar = () => {
+    setIsMobileSidebarOpen(false);
+  };
+
+  const [location] = useLocation();
+  const [searchTerm, setSearchTerm] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Function to determine if a nav item is active
+  const isActive = (path: string) => {
+    if (path === "/" && location === "/") return true;
+    if (path !== "/" && location.startsWith(path)) return true;
+    return false;
+  };
+
+  // Handle search submission
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/network?search=${encodeURIComponent(searchTerm)}`);
+    }
+  };
+
+  // Handle Enter key in search
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
 
   return (
-    <header className="bg-primary text-white p-4 shadow-md fixed top-0 left-0 right-0 z-50">
-      <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center">
+    <header className="bg-white text-gray-700 border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+      <div className="container mx-auto px-4 flex items-center h-14">
+        {/* Logo */}
+        <div className="flex items-center mr-2">
           <Link href="/">
             <div className="flex items-center cursor-pointer">
-              <div className="bg-white bg-opacity-20 rounded-md p-1">
-                <LeafIcon className="h-6 w-6 text-white" />
+              <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center">
+                <LeafIcon className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-lg ml-1">HF</span>
-              <h1 className="hidden md:block ml-2 font-bold">Hindustan Founders</h1>
+              <h1 className="hidden md:block ml-1 font-bold text-primary">Hindustan Founders</h1>
             </div>
           </Link>
-
-          <div className="hidden md:flex ml-8 space-x-6">
-            <Link href="/">
-              <div className="text-white hover:text-blue-200 cursor-pointer">Home</div>
-            </Link>
-            <Link href="/network">
-              <div className="text-white hover:text-blue-200 cursor-pointer">Network</div>
-            </Link>
-            <Link href="/pitch-room">
-              <div className="text-white hover:text-blue-200 cursor-pointer">Pitch Room</div>
-            </Link>
-            <Link href="/messages">
-              <div className="text-white hover:text-blue-200 cursor-pointer">Chats</div>
-            </Link>
-            <Link href="/settings">
-              <div className="text-white hover:text-blue-200 cursor-pointer">Settings</div>
-            </Link>
-          </div>
         </div>
 
-        <div className="flex-1 max-w-md mx-4">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+        {/* Search Bar */}
+        <div className="relative max-w-xs mr-4">
+          <div className="relative flex items-center">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
             </span>
             <Input 
-              className="w-full bg-white text-gray-800 rounded-md py-2 pl-10 pr-4 placeholder-gray-500"
-              placeholder="Search people, posts, or jobs..." 
-              onChange={(e) => {
-                const searchTerm = e.target.value;
-                // Navigate to network page with search term
-                if (searchTerm.trim()) {
-                  navigate(`/network?search=${encodeURIComponent(searchTerm)}`);
-                }
-              }}
+              ref={searchInputRef}
+              className="w-full bg-gray-100 text-gray-800 rounded-md py-1.5 pl-10 pr-4 placeholder-gray-500 border-none focus-visible:ring-1 focus-visible:ring-gray-400"
+              placeholder="Search" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
         </div>
 
-        <div className="flex items-center space-x-5">
-          <ThemeToggle />
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-white hover:bg-primary/90"
-            onClick={() => navigate("/notifications")}
-          >
-            <div className="relative">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white">
-                2
-              </span>
-            </div>
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="hidden md:flex text-white hover:bg-primary/90"
-            onClick={() => navigate("/messages")}
-          >
-            <MessageCircle size={20} />
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="p-1 h-auto">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
-                  <AvatarFallback className="bg-blue-600">{getInitials()}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span>{user.name}</span>
-                  <span className="text-xs text-gray-500">@{user.username}</span>
+        {/* Main Navigation */}
+        <div className="hidden md:flex flex-1 justify-center">
+          <nav className="flex space-x-2">
+            <Link href="/">
+              <div className={`flex flex-col items-center px-4 py-1 cursor-pointer group ${isActive("/") ? "text-black" : "text-gray-500 hover:text-gray-700"}`}>
+                <div className={`p-1 rounded-md ${isActive("/") ? "text-black" : "text-gray-500 group-hover:text-gray-700"}`}>
+                  <Home size={20} />
                 </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              {user.role === "admin" && (
-                <DropdownMenuItem onClick={() => navigate("/admin-dashboard")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Admin Dashboard</span>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sign Out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <span className="text-xs mt-1 whitespace-nowrap">Home</span>
+                {isActive("/") && <div className="h-0.5 w-full bg-black mt-1 rounded-full"></div>}
+              </div>
+            </Link>
+            
+            <Link href="/network">
+              <div className={`flex flex-col items-center px-4 py-1 cursor-pointer group ${isActive("/network") ? "text-black" : "text-gray-500 hover:text-gray-700"}`}>
+                <div className={`p-1 rounded-md ${isActive("/network") ? "text-black" : "text-gray-500 group-hover:text-gray-700"}`}>
+                  <Users size={20} />
+                </div>
+                <span className="text-xs mt-1 whitespace-nowrap">My Network</span>
+                {isActive("/network") && <div className="h-0.5 w-full bg-black mt-1 rounded-full"></div>}
+              </div>
+            </Link>
+            
+            <Link href="/jobs">
+              <div className={`flex flex-col items-center px-4 py-1 cursor-pointer group ${isActive("/jobs") ? "text-black" : "text-gray-500 hover:text-gray-700"}`}>
+                <div className={`p-1 rounded-md ${isActive("/jobs") ? "text-black" : "text-gray-500 group-hover:text-gray-700"}`}>
+                  <Briefcase size={20} />
+                </div>
+                <span className="text-xs mt-1 whitespace-nowrap">Jobs</span>
+                {isActive("/jobs") && <div className="h-0.5 w-full bg-black mt-1 rounded-full"></div>}
+              </div>
+            </Link>
+            
+            <Link href="/messages">
+              <div className={`flex flex-col items-center px-4 py-1 cursor-pointer group ${isActive("/messages") ? "text-black" : "text-gray-500 hover:text-gray-700"}`}>
+                <div className={`p-1 rounded-md ${isActive("/messages") ? "text-black" : "text-gray-500 group-hover:text-gray-700"}`}>
+                  <MessageSquare size={20} />
+                </div>
+                <span className="text-xs mt-1 whitespace-nowrap">Messaging</span>
+                {isActive("/messages") && <div className="h-0.5 w-full bg-black mt-1 rounded-full"></div>}
+              </div>
+            </Link>
+            
+            <Link href="/notifications">
+              <div className={`flex flex-col items-center px-4 py-1 cursor-pointer group ${isActive("/notifications") ? "text-black" : "text-gray-500 hover:text-gray-700"}`}>
+                <div className={`p-1 rounded-md ${isActive("/notifications") ? "text-black" : "text-gray-500 group-hover:text-gray-700"} relative`}>
+                  <Bell size={20} />
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white">
+                    2
+                  </span>
+                </div>
+                <span className="text-xs mt-1 whitespace-nowrap">Notifications</span>
+                {isActive("/notifications") && <div className="h-0.5 w-full bg-black mt-1 rounded-full"></div>}
+              </div>
+            </Link>
+            
+            {/* Me Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex flex-col items-center px-4 py-1 cursor-pointer text-gray-500 hover:text-gray-700">
+                  <div className="p-1 rounded-md">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
+                      <AvatarFallback className="bg-primary text-[10px]">{getInitials()}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <span className="text-xs mt-1 flex items-center whitespace-nowrap">
+                    Me
+                    <ChevronDown className="h-3 w-3 ml-0.5" />
+                  </span>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <div className="p-2 border-b">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
+                      <AvatarFallback className="bg-primary">{getInitials()}</AvatarFallback>
+                    </Avatar>
+                    <div className="ml-3 flex-1 min-w-0">
+                      <p className="font-semibold truncate">{user.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.title || "Update your headline"}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-2 text-primary border-primary hover:bg-primary/5"
+                    onClick={() => navigate("/profile")}
+                  >
+                    View Profile
+                  </Button>
+                </div>
+                
+                <div className="p-2 border-b">
+                  <h3 className="font-semibold text-sm mb-2">Account</h3>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => navigate("/settings")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings & Privacy</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/help")}>
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      <span>Help</span>
+                    </DropdownMenuItem>
+                    {user.role === "admin" && (
+                      <DropdownMenuItem onClick={() => navigate("/admin-dashboard")}>
+                        <BarChart2 className="mr-2 h-4 w-4" />
+                        <span>Admin Dashboard</span>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuGroup>
+                </div>
+                
+                <div className="p-2">
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            {/* Work Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex flex-col items-center px-4 py-1 cursor-pointer text-gray-500 hover:text-gray-700">
+                  <div className="p-1 rounded-md">
+                    <Grid size={20} />
+                  </div>
+                  <span className="text-xs mt-1 flex items-center whitespace-nowrap">
+                    Work
+                    <ChevronDown className="h-3 w-3 ml-0.5" />
+                  </span>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <div className="p-2 border-b">
+                  <h3 className="font-semibold text-sm mb-2">Create</h3>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => navigate("/pitch-room")}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Pitch Room</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/create-event")}>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Event</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/jobs/post")}>
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      <span>Job Posting</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </div>
+                
+                <div className="p-2">
+                  <h3 className="font-semibold text-sm mb-2">Hindustan Founders Tools</h3>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => navigate("/analytics")}>
+                      <BarChart2 className="mr-2 h-4 w-4" />
+                      <span>Analytics</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/resources")}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Resources</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+        </div>
+
+        {/* Mobile Menu Button */}
+        <div className="md:hidden ml-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-gray-700"
+            onClick={toggleMobileSidebar}
+          >
+            <Menu size={24} />
+          </Button>
         </div>
       </div>
+      
+      {/* Mobile Sidebar */}
+      <MobileSidebar isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} />
     </header>
   );
 }

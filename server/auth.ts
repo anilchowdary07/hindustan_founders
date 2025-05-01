@@ -50,6 +50,8 @@ export async function hashPassword(password: string, timeoutMs = 5000) {
 
 export async function comparePasswords(supplied: string, stored: string) {
   try {
+    console.log("Comparing passwords...");
+    
     // Check for empty inputs
     if (!supplied || !stored) {
       console.error("Empty password or hash provided to comparePasswords");
@@ -58,23 +60,30 @@ export async function comparePasswords(supplied: string, stored: string) {
     
     // Check if stored password has the expected format
     if (!stored.includes('.')) {
-      console.error("Invalid stored password format");
+      console.error("Invalid stored password format:", stored);
       return false;
     }
     
     const [hashed, salt] = stored.split(".");
+    console.log("Password format check passed, using salt:", salt === 'fallback' ? 'fallback' : '[scrypt salt]');
     
     // Handle fallback hash case
     if (salt === 'fallback') {
+      console.log("Using fallback SHA-256 comparison");
       const suppliedHash = createHash('sha256').update(supplied).digest('hex');
-      return hashed === suppliedHash;
+      const result = hashed === suppliedHash;
+      console.log("Fallback comparison result:", result);
+      return result;
     }
     
     // Handle regular scrypt hash
+    console.log("Using scrypt comparison");
     const hashedBuf = Buffer.from(hashed, "hex");
     // Use the same key length as in hashPassword (32)
     const suppliedBuf = (await scryptAsync(supplied, salt, 32)) as Buffer;
-    return timingSafeEqual(hashedBuf, suppliedBuf);
+    const result = timingSafeEqual(hashedBuf, suppliedBuf);
+    console.log("Scrypt comparison result:", result);
+    return result;
   } catch (error) {
     console.error("Error comparing passwords:", error);
     return false; // Fail closed on error
@@ -137,11 +146,28 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
+      console.log("LocalStrategy authenticating user:", username);
+      try {
+        const user = await storage.getUserByUsername(username);
+        
+        if (!user) {
+          console.log("User not found:", username);
+          return done(null, false);
+        }
+        
+        console.log("User found, comparing passwords");
+        const passwordMatch = await comparePasswords(password, user.password);
+        
+        if (!passwordMatch) {
+          console.log("Password does not match for user:", username);
+          return done(null, false);
+        }
+        
+        console.log("Authentication successful for user:", username);
         return done(null, user);
+      } catch (error) {
+        console.error("Error in LocalStrategy:", error);
+        return done(error as Error);
       }
     }),
   );
@@ -287,8 +313,11 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt for username:", req.body.username);
+    
     // Validate required fields
     if (!req.body.username || !req.body.password) {
+      console.log("Missing username or password in login request");
       return res.status(400).json({ 
         message: "Username and password are required" 
       });
@@ -298,19 +327,24 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", (err: Error | null, user: SelectUser | false, info: { message: string }) => {
       if (err) {
         console.error("Error during authentication:", err);
-        return res.status(500).json({ message: "Authentication error" });
+        return res.status(500).json({ message: "Authentication error", details: err.message });
       }
       
       if (!user) {
+        console.log("Authentication failed for user:", req.body.username);
         return res.status(401).json({ message: "Invalid username or password" });
       }
+      
+      console.log("User authenticated successfully:", user.username);
       
       // Log the user in
       req.login(user, (loginErr) => {
         if (loginErr) {
-          console.error("Error during login:", loginErr);
-          return res.status(500).json({ message: "Login error" });
+          console.error("Error during login session creation:", loginErr);
+          return res.status(500).json({ message: "Login session error", details: loginErr.message });
         }
+        
+        console.log("Login session created for user:", user.username);
         
         // Remove password from response
         const { password, ...userWithoutPassword } = user;

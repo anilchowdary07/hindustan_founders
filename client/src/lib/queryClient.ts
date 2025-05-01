@@ -2,8 +2,24 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      // Try to parse as JSON first
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await res.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || `${res.status}: ${res.statusText}`);
+      } else {
+        const text = await res.text();
+        console.error('API Error:', text);
+        throw new Error(`${res.status}: ${text || res.statusText}`);
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        throw e;
+      }
+      throw new Error(`${res.status}: ${res.statusText}`);
+    }
   }
 }
 
@@ -12,43 +28,38 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Determine if we're on Netlify or Vercel
+  // Keep the URL as is - no need to modify for different environments
   let apiUrl = url;
-  const isNetlify = window.location.hostname.includes('netlify.app') || 
-                   window.location.hostname === 'localhost';
-  
-  if (url.startsWith('/api/')) {
-    if (isNetlify) {
-      // Use Netlify-specific path format
-      apiUrl = url.replace(/^\/api\//, '/.netlify/functions/api/');
-      console.log('Using Netlify API path:', apiUrl);
-    } else {
-      // Keep as /api/ for Vercel
-      console.log('Using Vercel API path:', apiUrl);
-    }
-  }
   
   // Ensure URL is absolute
   if (!apiUrl.startsWith('http')) {
     apiUrl = window.location.origin + apiUrl;
   }
   
-  console.log(`Making API request to: ${apiUrl}`);
+  console.log(`Making API request to: ${apiUrl}`, method, data);
   
-  const res = await fetch(apiUrl, {
-    method,
-    headers: {
-      ...(data ? { "Content-Type": "application/json" } : {}),
-      // Add cache control headers to prevent caching of API requests
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache"
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(apiUrl, {
+      method,
+      headers: {
+        ...(data ? { "Content-Type": "application/json" } : {}),
+        // Add cache control headers to prevent caching of API requests
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Log response status
+    console.log(`API response status: ${res.status} ${res.statusText}`);
+    
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error(`API request failed to ${apiUrl}:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -60,13 +71,8 @@ export const getQueryFn: <T>(options: {
     // Get the URL from the query key
     const url = queryKey[0] as string;
     
-    // Adjust URL for Netlify Functions
+    // Keep URL as is
     let apiUrl = url;
-    if (url.startsWith('/api/')) {
-      // Convert /api/xyz to /.netlify/functions/api/xyz for Netlify deployment
-      // Remove the /api prefix as our Netlify function handles paths directly
-      apiUrl = url.replace(/^\/api\//, '/.netlify/functions/api/');
-    }
     
     // Ensure URL is absolute
     if (!apiUrl.startsWith('http')) {
@@ -75,21 +81,31 @@ export const getQueryFn: <T>(options: {
     
     console.log(`Making query request to: ${apiUrl}`);
     
-    const res = await fetch(apiUrl, {
-      credentials: "include",
-      headers: {
-        // Add cache control headers to prevent caching of API requests
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Pragma": "no-cache"
+    try {
+      const res = await fetch(apiUrl, {
+        credentials: "include",
+        headers: {
+          // Add cache control headers to prevent caching of API requests
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache"
+        }
+      });
+      
+      console.log(`Query response status: ${res.status} ${res.statusText}`);
+
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        console.log("Unauthorized request, returning null as configured");
+        return null;
       }
-    });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      await throwIfResNotOk(res);
+      const data = await res.json();
+      console.log(`Query response data:`, data);
+      return data;
+    } catch (error) {
+      console.error(`Query request failed to ${apiUrl}:`, error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

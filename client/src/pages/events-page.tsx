@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import Layout from "@/components/layout/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Clock, Users, Filter, Search, Share2, Calendar as CalendarIcon } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, Filter, Search, Share2, Calendar as CalendarIcon, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -207,6 +208,8 @@ export default function EventsPage() {
     });
   };
 
+  const [, navigate] = useLocation();
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4">
@@ -233,6 +236,13 @@ export default function EventsPage() {
             >
               <Filter className="h-4 w-4 mr-2" />
               Filters
+            </Button>
+            <Button 
+              onClick={() => navigate("/create-event")}
+              className="sm:w-auto"
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create Event
             </Button>
           </div>
         </div>

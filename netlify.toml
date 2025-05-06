@@ -1,9 +1,9 @@
 [build]
   command = "npm run build"
-  functions = "netlify/functions"
-  publish = "dist"
+  functions = "dist/netlify/functions"
+  publish = "dist/public"  # Matches your Vite's outDir
 
-# This redirect is needed for a Single Page Application
+# This redirect is needed for a Single Page Application (SPA)
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -12,13 +12,32 @@
 # API redirects - forward API requests to your serverless functions
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api.cjs/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
+# Netlify doesn't allow redirects that start with /.netlify
+# We'll rely on the API redirect above
+
 [functions]
-  directory = "netlify/functions"
+  directory = "dist/netlify/functions"
+  node_bundler = "esbuild"
   
-[dev]
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--version" # Prevent Netlify npm install
+
+# Production context: all deploys from the Production branch set in your site's
+# deploy contexts will inherit these settings.
+[context.production]
+  command = "npm run build"
+  publish = "dist/public"
+
+[context.production.environment]
+  NODE_ENV = "production"
+
+# Development context: all deploys that are not from a pull/merge request
+# or from the Production branch will inherit these settings.
+[context.dev]
   command = "npm run dev"
   port = 3000
   publish = "dist/public"

@@ -92,16 +92,25 @@ export async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const isProduction = process.env.NODE_ENV === 'production';
-  const isVercel = process.env.VERCEL === '1';
+  const isServerless = process.env.VERCEL === '1' || process.env.NETLIFY === 'true';
+  const isNetlify = process.env.NETLIFY === 'true';
+  
+  console.log("Setting up auth with environment:", {
+    NODE_ENV: process.env.NODE_ENV,
+    isProduction,
+    isServerless,
+    NETLIFY: process.env.NETLIFY,
+    DATABASE_URL: process.env.DATABASE_URL ? "Set (value hidden)" : "Not set"
+  });
   
   // If we're in a serverless environment and session middleware is already set up, skip
-  if (isVercel && app.get('session-initialized')) {
+  if (isServerless && app.get('session-initialized')) {
     console.log('Session already initialized, skipping...');
     return;
   }
   
   // Create memory store for serverless environments
-  const sessionStore = isVercel 
+  const sessionStore = isServerless 
     ? new (createMemoryStore(session))({
         checkPeriod: 86400000, // 24 hours
       })
@@ -114,6 +123,8 @@ export function setupAuth(app: Express) {
     process.env.SESSION_SECRET = randomBytes(32).toString('hex');
   }
 
+  // For Netlify, we need to adjust cookie settings
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -121,11 +132,21 @@ export function setupAuth(app: Express) {
     store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      secure: isProduction, // Set to true in production
+      secure: isProduction && !isNetlify, // Netlify functions don't support secure cookies in dev
       httpOnly: true,
-      sameSite: isProduction ? 'none' : 'lax' // 'none' is required for cross-site cookies in production
+      sameSite: isProduction && !isNetlify ? 'none' : 'lax' // 'none' is required for cross-site cookies in production
     }
   };
+  
+  console.log("Session settings:", {
+    secret: process.env.SESSION_SECRET ? "Set (value hidden)" : "Not set",
+    store: sessionStore ? "Configured" : "Not configured",
+    cookie: {
+      maxAge: sessionSettings.cookie?.maxAge,
+      secure: sessionSettings.cookie?.secure,
+      sameSite: sessionSettings.cookie?.sameSite
+    }
+  });
 
   // Mark session as initialized to prevent duplicate initialization
   app.set('session-initialized', true);
@@ -312,8 +333,10 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", async (req, res, next) => {
     console.log("Login attempt for username:", req.body.username);
+    console.log("Request headers:", req.headers);
+    console.log("Session ID:", req.sessionID);
     
     // Validate required fields
     if (!req.body.username || !req.body.password) {
@@ -323,19 +346,24 @@ export function setupAuth(app: Express) {
       });
     }
     
-    // Use passport authenticate with custom callback for better error handling
-    passport.authenticate("local", (err: Error | null, user: SelectUser | false, info: { message: string }) => {
-      if (err) {
-        console.error("Error during authentication:", err);
-        return res.status(500).json({ message: "Authentication error", details: err.message });
-      }
+    try {
+      // First, try to get the user directly from the database
+      const user = await storage.getUserByUsername(req.body.username);
       
       if (!user) {
-        console.log("Authentication failed for user:", req.body.username);
+        console.log("User not found:", req.body.username);
         return res.status(401).json({ message: "Invalid username or password" });
       }
       
-      console.log("User authenticated successfully:", user.username);
+      console.log("User found, comparing passwords");
+      const passwordMatch = await comparePasswords(req.body.password, user.password);
+      
+      if (!passwordMatch) {
+        console.log("Password does not match for user:", req.body.username);
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      console.log("Authentication successful for user:", user.username);
       
       // Log the user in
       req.login(user, (loginErr) => {
@@ -345,17 +373,45 @@ export function setupAuth(app: Express) {
         }
         
         console.log("Login session created for user:", user.username);
+        console.log("Session after login:", req.session);
         
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
+        
+        // Set a cookie directly as a backup for Netlify
+        if (process.env.NETLIFY === 'true') {
+          res.cookie('user_id', user.id.toString(), { 
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+            httpOnly: true,
+            path: '/'
+          });
+          console.log("Set backup user_id cookie for Netlify");
+        }
+        
         res.status(200).json(userWithoutPassword);
       });
-    })(req, res, next);
+    } catch (error) {
+      console.error("Error in login process:", error);
+      return res.status(500).json({ 
+        message: "Login failed due to server error", 
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined 
+      });
+    }
   });
 
   app.post("/api/logout", (req, res, next) => {
+    console.log("Logout request received");
+    
     // If user is not authenticated, just return success
     if (!req.isAuthenticated()) {
+      console.log("User already logged out");
+      
+      // Clear the backup cookie for Netlify anyway
+      if (process.env.NETLIFY === 'true') {
+        res.clearCookie('user_id', { path: '/' });
+        console.log("Cleared backup user_id cookie for Netlify");
+      }
+      
       return res.status(200).json({ message: "Already logged out" });
     }
     
@@ -363,6 +419,12 @@ export function setupAuth(app: Express) {
       if (err) {
         console.error("Error during logout:", err);
         return res.status(500).json({ message: "Logout failed" });
+      }
+      
+      // Clear the backup cookie for Netlify
+      if (process.env.NETLIFY === 'true') {
+        res.clearCookie('user_id', { path: '/' });
+        console.log("Cleared backup user_id cookie for Netlify");
       }
       
       // Destroy the session to ensure complete logout
@@ -373,9 +435,11 @@ export function setupAuth(app: Express) {
           }
           // Clear the cookie even if session destruction fails
           res.clearCookie('connect.sid');
+          console.log("Session destroyed and cookies cleared");
           return res.status(200).json({ message: "Logged out successfully" });
         });
       } else {
+        console.log("No session to destroy");
         res.status(200).json({ message: "Logged out successfully" });
       }
     });
@@ -383,6 +447,40 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", async (req, res) => {
     try {
+      console.log("GET /api/user - Session ID:", req.sessionID);
+      console.log("Is authenticated:", req.isAuthenticated());
+      console.log("Cookies:", req.cookies);
+      
+      // For Netlify, try to use the backup cookie if session auth fails
+      if (!req.isAuthenticated() && process.env.NETLIFY === 'true' && req.cookies?.user_id) {
+        console.log("Session auth failed but found backup user_id cookie:", req.cookies.user_id);
+        
+        try {
+          const userId = parseInt(req.cookies.user_id);
+          const user = await storage.getUser(userId);
+          
+          if (user) {
+            console.log("Found user from backup cookie:", user.username);
+            // Log the user in using the session
+            req.login(user, (loginErr) => {
+              if (loginErr) {
+                console.error("Error restoring session from cookie:", loginErr);
+                return res.status(401).json({ message: "Not authenticated" });
+              }
+              
+              console.log("Session restored from backup cookie");
+              const { password, ...userWithoutPassword } = user;
+              return res.json(userWithoutPassword);
+            });
+            return;
+          } else {
+            console.log("No user found for backup cookie ID:", userId);
+          }
+        } catch (cookieError) {
+          console.error("Error processing backup cookie:", cookieError);
+        }
+      }
+      
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -401,6 +499,17 @@ export function setupAuth(app: Express) {
       
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
+      
+      // Refresh the backup cookie for Netlify
+      if (process.env.NETLIFY === 'true') {
+        res.cookie('user_id', user.id.toString(), { 
+          maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+          httpOnly: true,
+          path: '/'
+        });
+        console.log("Refreshed backup user_id cookie for Netlify");
+      }
+      
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error fetching current user:", error);

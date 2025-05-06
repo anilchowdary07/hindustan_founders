@@ -23,6 +23,7 @@ import { Loader2, Search, UserX, UserCheck, Shield, Settings, Users, Activity, B
 import { useLocation } from "wouter";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from "chart.js";
+import { DemoDataLoader } from "@/components/admin/demo-data-loader";
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend);
@@ -500,6 +501,26 @@ export default function AdminDashboard() {
                 <CardDescription>Manage all users on the platform</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <CheckCircle className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-800">User Verification</h3>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <p>
+                          As an admin, you can verify users to give them a blue checkmark badge. This helps the community identify authentic and notable members.
+                        </p>
+                        <p className="mt-1">
+                          <strong>When to verify users:</strong> Verify founders of established companies, industry experts, investors, and other notable figures.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardContent>
                 <div className="flex items-center mb-4">
                   <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -543,6 +564,7 @@ export default function AdminDashboard() {
                               <TableCell>
                                 {user.isVerified ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
                                     Verified
                                   </span>
                                 ) : (
@@ -553,14 +575,40 @@ export default function AdminDashboard() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleToggleVerification(user.id, user.isVerified)}
-                                    disabled={toggleVerificationMutation.isPending}
-                                  >
-                                    {user.isVerified ? 'Unverify' : 'Verify'}
-                                  </Button>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant={user.isVerified ? "outline" : "default"}
+                                        size="sm"
+                                        className={user.isVerified ? "border-blue-500 text-blue-500" : "bg-blue-500 text-white"}
+                                        disabled={toggleVerificationMutation.isPending}
+                                      >
+                                        {toggleVerificationMutation.isPending ? (
+                                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                        ) : (
+                                          <CheckCircle className="h-4 w-4 mr-1" />
+                                        )}
+                                        {user.isVerified ? 'Verified' : 'Verify User'}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                      <div className="space-y-2">
+                                        <h4 className="font-medium">User Verification</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                          Verified users receive a blue checkmark badge next to their name, indicating they are authentic and notable figures in the community.
+                                        </p>
+                                        <div className="flex justify-between pt-2">
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => handleToggleVerification(user.id, user.isVerified)}
+                                          >
+                                            {user.isVerified ? 'Remove Verification' : 'Verify User'}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
                                   
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -1039,6 +1087,8 @@ export default function AdminDashboard() {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            <DemoDataLoader />
+            
             <Card>
               <CardHeader>
                 <CardTitle>Platform Settings</CardTitle>

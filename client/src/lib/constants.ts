@@ -1,7 +1,7 @@
 // Base API URL (automatically detects environment)
 export const API_URL = process.env.NODE_ENV === 'production' 
   ? '/.netlify/functions/api'
-  : 'http://localhost:8888/.netlify/functions/api';
+  : '/api';
 
 // File upload limits
 export const MAX_FILE_SIZE_MB = 10;

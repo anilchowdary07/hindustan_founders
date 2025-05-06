@@ -61,6 +61,20 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // LinkedIn-specific colors
+        linkedin: {
+          blue: "#0A66C2",
+          "light-blue": "#EEF3F8",
+          "dark-blue": "#004182",
+          black: "#191919",
+          "dark-gray": "#666666",
+          "medium-gray": "#86888A",
+          "light-gray": "#E0E0E0",
+          "background-gray": "#F3F2EF",
+          "border-gray": "#E0E0E0",
+          "notification-red": "#CC1016",
+          "premium-gold": "#F8C77E",
+        },
       },
       keyframes: {
         "accordion-down": {
@@ -79,10 +93,55 @@ export default {
             height: "0",
           },
         },
+        "shimmer": {
+          "0%": {
+            backgroundPosition: "-200% 0",
+          },
+          "100%": {
+            backgroundPosition: "200% 0",
+          },
+        },
+        "slide-up": {
+          "0%": {
+            transform: "translateY(100%)",
+          },
+          "100%": {
+            transform: "translateY(0)",
+          },
+        },
+        "slide-down": {
+          "0%": {
+            transform: "translateY(0)",
+          },
+          "100%": {
+            transform: "translateY(100%)",
+          },
+        },
+        "fade-in": {
+          "0%": {
+            opacity: "0",
+          },
+          "100%": {
+            opacity: "1",
+          },
+        },
+        "fade-out": {
+          "0%": {
+            opacity: "1",
+          },
+          "100%": {
+            opacity: "0",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "shimmer": "shimmer 1.5s infinite",
+        "slide-up": "slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "slide-down": "slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "fade-in": "fade-in 0.2s ease-out",
+        "fade-out": "fade-out 0.2s ease-out",
       },
     },
   },

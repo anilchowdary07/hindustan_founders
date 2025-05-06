@@ -1,9 +1,13 @@
 import Layout from "@/components/layout/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Shield, Lock, Eye, FileText, Bell, Server } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { Shield, Lock, Eye, FileText, Bell, Server, Cookie } from "lucide-react";
 
 export default function PrivacyPolicyPage() {
+  const [, navigate] = useLocation();
+  
   return (
     <Layout>
       <div className="max-w-4xl mx-auto py-8 px-4">
@@ -46,6 +50,26 @@ export default function PrivacyPolicyPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Add Cookie Notice */}
+            <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 mb-4">
+              <div className="flex items-start">
+                <Cookie className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium text-primary">Cookie Usage</h3>
+                  <p className="text-sm mt-1">
+                    We use cookies and similar tracking technologies to track activity on our platform and store certain information. 
+                    For detailed information about the cookies we use and your choices regarding cookies, please see our Cookie Policy.
+                  </p>
+                  <Button 
+                    variant="link" 
+                    className="text-primary p-0 h-auto text-sm mt-2"
+                    onClick={() => navigate('/cookie-policy')}
+                  >
+                    View Cookie Policy
+                  </Button>
+                </div>
+              </div>
+            </div>
             <div>
               <h3 className="text-lg font-medium mb-2">Personal Data</h3>
               <p className="mb-4">
@@ -236,6 +260,14 @@ export default function PrivacyPolicyPage() {
               <p>Telangana, India - 500081</p>
               <p className="mt-2">Email: privacy@hindustanfounders.net</p>
               <p>Phone: +91 98765 43210</p>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-6">
+              <Button onClick={() => navigate("/terms-of-service")}>
+                Terms of Service
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/cookie-policy")}>
+                Cookie Policy
+              </Button>
             </div>
           </CardContent>
         </Card>

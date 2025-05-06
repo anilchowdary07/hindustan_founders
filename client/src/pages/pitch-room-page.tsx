@@ -1,18 +1,23 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/api";
 import Layout from "@/components/layout/layout";
 import PitchItem from "@/components/pitch/pitch-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PitchStatus, PitchStatusType } from "@shared/schema";
-import { Bell, Plus, Loader2 } from "lucide-react";
+import { 
+  Bell, Plus, Loader2, ChevronDown, ChevronUp, 
+  Sprout, Landmark, Search, Filter
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 export default function PitchRoomPage() {
   const [activeTab, setActiveTab] = useState<PitchStatusType>(PitchStatus.IDEA);
@@ -53,8 +58,15 @@ export default function PitchRoomPage() {
     queryKey: ["/api/pitches", { status: activeTab }],
     queryFn: async () => {
       try {
-        const res = await apiRequest("GET", "/api/pitches");
-        return await res.json();
+        const res = await apiRequest(`/api/pitches?status=${activeTab}`);
+        console.log("API response for pitches:", res);
+        
+        // Ensure we always return an array
+        if (res.data) {
+          return Array.isArray(res.data) ? res.data : [res.data];
+        } else {
+          return [];
+        }
       } catch (err) {
         console.error("Error fetching pitches:", err);
         return [];
@@ -65,7 +77,7 @@ export default function PitchRoomPage() {
   const createPitchMutation = useMutation({
     mutationFn: async (data: typeof pitchData) => {
       const res = await apiRequest("POST", "/api/pitches", data);
-      return await res.json();
+      return res.data;
     },
     onSuccess: () => {
       toast({
@@ -129,6 +141,19 @@ export default function PitchRoomPage() {
               <Skeleton className="h-3 w-24" />
             </div>
           </div>
+          <div className="mt-4 pt-3 border-t">
+            <div className="flex justify-between">
+              <div className="flex space-x-2">
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-8 w-16" />
+              </div>
+              <div className="flex space-x-2">
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-8 w-16" />
+              </div>
+            </div>
+          </div>
         </div>
       ));
     }
@@ -136,65 +161,164 @@ export default function PitchRoomPage() {
     if (error) {
       return (
         <div className="bg-red-50 p-4 rounded-md text-red-800 mb-4">
-          Failed to load pitches. Please try again later.
+          <div className="flex items-center">
+            <div className="mr-3 text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-medium">Error Loading Pitches</h3>
+              <p className="text-sm">Failed to load pitches. Please try again later.</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-3"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/pitches"] })}
+          >
+            <Loader2 className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
         </div>
       );
     }
 
-    if (!pitches || !Array.isArray(pitches) || pitches.length === 0) {
+    // Apply filters
+    let filteredPitches = pitches as any[] || [];
+    
+    if (filters.city && filters.city !== "") {
+      filteredPitches = filteredPitches.filter(pitch => 
+        pitch.location.toLowerCase().includes(filters.city.toLowerCase())
+      );
+    }
+    
+    if (filters.industry && filters.industry !== "") {
+      filteredPitches = filteredPitches.filter(pitch => 
+        pitch.category.toLowerCase() === filters.industry.toLowerCase()
+      );
+    }
+    
+    // Filter by active tab (status)
+    filteredPitches = filteredPitches.filter(pitch => pitch.status === activeTab);
+
+    if (!filteredPitches || !Array.isArray(filteredPitches) || filteredPitches.length === 0) {
       return (
         <div className="bg-white rounded-lg shadow-md p-6 text-center mb-4">
-          <h3 className="text-lg font-medium mb-2">No pitches found</h3>
-          <p className="text-gray-600">
-            There are no pitches in this category yet.
-          </p>
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="bg-gray-100 p-4 rounded-full mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium mb-2">No pitches found</h3>
+            <p className="text-gray-600 mb-4 text-center max-w-md">
+              {filters.city || filters.industry 
+                ? "No pitches match your current filters. Try adjusting your filters or check back later."
+                : "There are no pitches in this category yet. Be the first to add one!"}
+            </p>
+            {(filters.city || filters.industry) && (
+              <Button 
+                variant="outline" 
+                onClick={() => setFilters({ city: "", industry: "" })}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
         </div>
       );
     }
 
-    return (pitches as any[]).map((pitch: any) => (
+    return filteredPitches.map((pitch: any) => (
       <PitchItem key={pitch.id} pitch={pitch} />
     ));
   };
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Pitch Room</h1>
-        <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
-        </Button>
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[#191919]">Pitch Room</h1>
+          <p className="text-[#666666] text-sm mt-1 mb-3 md:mb-0">Discover and connect with innovative startups</p>
+        </div>
+        <div className="flex items-center space-x-2 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-initial mr-2 md:mr-0">
+            <Input
+              type="search"
+              placeholder="Search pitches..."
+              className="pl-8 pr-4 py-2 w-full md:w-[200px] rounded-full text-sm"
+            />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="hidden md:flex border-[#0077B5] text-[#0077B5] hover:bg-[#E5F5FC] rounded-full"
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Create Alert
+          </Button>
+          <Link href="/pitch/create">
+            <Button 
+              size="sm" 
+              className="bg-[#0077B5] hover:bg-[#006097] text-white rounded-full"
+            >
+              <Plus className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Add Your Pitch</span>
+            </Button>
+          </Link>
+        </div>
       </div>
       
-      {/* Pitch Tabs */}
-      <div className="flex space-x-2 mb-6 overflow-x-auto">
+      {/* Pitch Tabs - Mobile Optimized */}
+      <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 pb-1">
         <Button 
           variant={activeTab === PitchStatus.IDEA ? "default" : "outline"}
-          className="rounded-full"
+          className={`rounded-full font-medium whitespace-nowrap ${
+            activeTab === PitchStatus.IDEA 
+              ? "bg-[#0077B5] text-white hover:bg-[#006097]" 
+              : "border-[#0077B5] text-[#0077B5] hover:bg-[#E5F5FC]"
+          }`}
           onClick={() => setActiveTab(PitchStatus.IDEA)}
         >
+          <Sprout className="h-4 w-4 mr-2" />
           Ideas
         </Button>
         <Button 
           variant={activeTab === PitchStatus.REGISTERED ? "default" : "outline"}
-          className="rounded-full"
+          className={`rounded-full font-medium whitespace-nowrap ${
+            activeTab === PitchStatus.REGISTERED 
+              ? "bg-[#0077B5] text-white hover:bg-[#006097]" 
+              : "border-[#0077B5] text-[#0077B5] hover:bg-[#E5F5FC]"
+          }`}
           onClick={() => setActiveTab(PitchStatus.REGISTERED)}
         >
+          <Landmark className="h-4 w-4 mr-2" />
           Registered
         </Button>
+        <Button 
+          variant="outline"
+          className="rounded-full whitespace-nowrap border-[#0077B5] text-[#0077B5] hover:bg-[#E5F5FC]"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filter
+        </Button>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+          <DialogTrigger asChild className="hidden">
             <Button 
-              variant="outline"
-              className="rounded-full"
+              variant="outline" 
+              className="rounded-full border-[#0077B5] text-[#0077B5] hover:bg-[#E5F5FC]"
             >
               <Plus className="h-4 w-4 mr-1" />
-              Pitch yours
+              Add Pitch
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto rounded-lg shadow-lg border border-[#E0E0E0]">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Pitch Your Startup</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#191919]">Pitch Your Startup</DialogTitle>
             </DialogHeader>
             <div className="grid gap-5 py-4">
               <div className="grid gap-3">
@@ -419,7 +543,7 @@ export default function PitchRoomPage() {
                 type="submit" 
                 onClick={handlePitchSubmit}
                 disabled={createPitchMutation.isPending}
-                className="w-full"
+                className="w-full bg-[#0077B5] hover:bg-[#006097] text-white rounded-full font-medium"
               >
                 {createPitchMutation.isPending ? 
                   <div className="flex items-center justify-center">
@@ -434,45 +558,57 @@ export default function PitchRoomPage() {
         </Dialog>
       </div>
       
-      {/* Alert Section */}
+      {/* Pitches Section with Filters */}
       <div className="mb-6">
-        <h2 className="text-lg font-medium mb-2">Get notified about startups you're interested in</h2>
-        <Button variant="link" className="p-0 h-auto text-primary font-medium">Create alert</Button>
-      </div>
-      
-      {/* Pitches */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
           <div>
-            <h2 className="text-lg font-medium">Find your next pitch</h2>
-            <p className="text-sm text-gray-500">
-              Based on your profile, activity like applications, searches, and saves
+            <h2 className="text-lg font-medium text-[#191919]">Find your next opportunity</h2>
+            <p className="text-sm text-[#666666]">
+              Discover startups that match your interests and expertise
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <span className="mr-1">Filter</span> <span className="text-xs">▼</span>
-          </Button>
+          <div className="flex items-center space-x-2 self-end md:self-auto">
+            {(filters.city || filters.industry) && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setFilters({ city: "", industry: "" })}
+                className="text-xs text-[#0077B5] hover:bg-[#E5F5FC] rounded-md"
+              >
+                Clear Filters
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`rounded-md border-[#E0E0E0] text-[#191919] ${showFilters ? "bg-[#EBEBEB]" : "hover:bg-[#EBEBEB]"}`}
+            >
+              <span className="mr-1">Filter</span> 
+              {showFilters ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
         </div>
         
         {/* Filter Panel */}
         {showFilters && (
-          <div className="bg-white rounded-lg shadow-md p-4 mb-4 border border-gray-200">
-            <h3 className="font-medium mb-3">Filter Startups</h3>
-            <div className="space-y-4">
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-4 border border-[#E0E0E0] animate-in fade-in-50 duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="filter-city">Select City:</Label>
+                <Label htmlFor="filter-city" className="text-sm font-medium text-[#191919]">Location</Label>
                 <Select 
                   value={filters.city} 
                   onValueChange={(value) => setFilters({...filters, city: value})}
                 >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select a city" />
+                  <SelectTrigger className="mt-1 border-[#E0E0E0] focus:ring-[#0077B5] focus:border-[#0077B5]">
+                    <SelectValue placeholder="All locations" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="border-[#E0E0E0] shadow-md">
+                    <SelectItem value="">All locations</SelectItem>
                     <SelectItem value="Mumbai">Mumbai</SelectItem>
                     <SelectItem value="Delhi">Delhi</SelectItem>
                     <SelectItem value="Bangalore">Bangalore</SelectItem>
@@ -486,15 +622,16 @@ export default function PitchRoomPage() {
               </div>
               
               <div>
-                <Label htmlFor="filter-industry">Select Industry:</Label>
+                <Label htmlFor="filter-industry" className="text-sm font-medium text-[#191919]">Industry</Label>
                 <Select 
                   value={filters.industry} 
                   onValueChange={(value) => setFilters({...filters, industry: value})}
                 >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select an industry" />
+                  <SelectTrigger className="mt-1 border-[#E0E0E0] focus:ring-[#0077B5] focus:border-[#0077B5]">
+                    <SelectValue placeholder="All industries" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="border-[#E0E0E0] shadow-md">
+                    <SelectItem value="">All industries</SelectItem>
                     <SelectItem value="E-commerce">E-commerce</SelectItem>
                     <SelectItem value="FinTech">FinTech</SelectItem>
                     <SelectItem value="EdTech">EdTech</SelectItem>
@@ -506,20 +643,40 @@ export default function PitchRoomPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#E0E0E0]">
+              <div className="text-sm text-[#666666]">
+                {activeTab === PitchStatus.IDEA ? "Showing idea-stage startups" : "Showing registered companies"}
+                {filters.city && ` in ${filters.city}`}
+                {filters.industry && ` in ${filters.industry}`}
+              </div>
               
-              <Button className="w-full">Apply Filters</Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-[#0077B5] hover:bg-[#E5F5FC] rounded-md"
+                onClick={() => setShowFilters(false)}
+              >
+                Done
+              </Button>
             </div>
           </div>
         )}
         
         {renderPitches()}
         
-        <Button 
-          variant="ghost" 
-          className="text-center w-full text-primary font-medium py-2"
-        >
-          Show all
-        </Button>
+        <div className="flex justify-center mt-6">
+          <Button 
+            variant="outline" 
+            className="text-center text-primary font-medium"
+          >
+            <span className="mr-2">Show more pitches</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </Button>
+        </div>
       </div>
     </Layout>
   );

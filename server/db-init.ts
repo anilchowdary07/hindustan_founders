@@ -92,6 +92,34 @@ async function initializeDatabase() {
     `);
     console.log('Jobs table created or already exists');
 
+    // Create connections table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS connections (
+        id SERIAL PRIMARY KEY,
+        requester_id INTEGER NOT NULL,
+        receiver_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('Connections table created or already exists');
+
+    // Create notifications table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        content TEXT NOT NULL,
+        read BOOLEAN DEFAULT false,
+        related_id INTEGER,
+        related_type TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('Notifications table created or already exists');
+
     console.log('Database schema initialization complete');
   } catch (error) {
     console.error('Error initializing database schema:', error);

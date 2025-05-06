@@ -74,6 +74,52 @@ async function main() {
       "expire" timestamp(6) NOT NULL,
       CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
     );
+    
+    -- Messaging tables
+    CREATE TABLE IF NOT EXISTS conversations (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS conversation_participants (
+      id SERIAL PRIMARY KEY,
+      conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at TIMESTAMP DEFAULT NOW(),
+      left_at TIMESTAMP,
+      UNIQUE(conversation_id, user_id)
+    );
+    
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      attachment_url TEXT,
+      attachment_type TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      is_edited BOOLEAN DEFAULT false,
+      is_deleted BOOLEAN DEFAULT false
+    );
+    
+    CREATE TABLE IF NOT EXISTS message_read_status (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      is_read BOOLEAN DEFAULT false,
+      read_at TIMESTAMP,
+      UNIQUE(message_id, user_id)
+    );
+    
+    -- Add indexes for better performance
+    CREATE INDEX IF NOT EXISTS idx_conversation_participants_conversation_id ON conversation_participants(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_conversation_participants_user_id ON conversation_participants(user_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
+    CREATE INDEX IF NOT EXISTS idx_message_read_status_message_id ON message_read_status(message_id);
+    CREATE INDEX IF NOT EXISTS idx_message_read_status_user_id ON message_read_status(user_id);
   `);
 
   console.log("Migration completed successfully");

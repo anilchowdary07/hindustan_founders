@@ -16,10 +16,17 @@ neonConfig.webSocketConstructor = ws;
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL not set. Please set a valid database connection string.");
   // In non-serverless environments, exit the process
-  if (process.env.VERCEL !== '1') {
+  if (process.env.VERCEL !== '1' && process.env.NETLIFY !== 'true') {
     process.exit(1);
   }
 }
+
+// Log environment information
+console.log("Database initialization environment:", {
+  NODE_ENV: process.env.NODE_ENV,
+  NETLIFY: process.env.NETLIFY,
+  DATABASE_URL: process.env.DATABASE_URL ? "Set (value hidden)" : "Not set"
+});
 
 // Use the environment variable for connection string
 const connectionString = process.env.DATABASE_URL;
@@ -50,7 +57,8 @@ const initializeDb = async () => {
     pool.on('error', (err) => {
       console.error('Unexpected error on idle client', err);
       // Don't exit process in serverless environment
-      if (process.env.VERCEL !== '1') {
+      const isServerless = process.env.VERCEL === '1' || process.env.NETLIFY === 'true';
+      if (!isServerless) {
         // Instead of exiting, we'll try to recover by reinitializing the pool
         console.log('Attempting to recover from database error...');
         dbInitialized = false;
@@ -61,11 +69,17 @@ const initializeDb = async () => {
             process.exit(-1);
           });
         }, 5000); // Wait 5 seconds before trying to reconnect
+      } else {
+        console.log('Database error in serverless environment - will attempt recovery on next request');
+        dbInitialized = false;
       }
     });
     
-    // Only test the connection in development mode
-    if (process.env.NODE_ENV === 'development' && process.env.VERCEL !== '1') {
+    // Only test the connection in development mode or if explicitly requested
+    const isServerless = process.env.VERCEL === '1' || process.env.NETLIFY === 'true';
+    const shouldTestConnection = process.env.NODE_ENV === 'development' || process.env.TEST_DB_CONNECTION === 'true';
+    
+    if (shouldTestConnection && !isServerless) {
       try {
         // Set a timeout for the connection test
         const connectionTestPromise = pool.query('SELECT NOW()');
@@ -79,6 +93,8 @@ const initializeDb = async () => {
         console.error('Database connection test failed:', testError);
         throw testError;
       }
+    } else if (isServerless) {
+      console.log('Skipping immediate database connection test in serverless environment');
     }
     
     dbInitialized = true;

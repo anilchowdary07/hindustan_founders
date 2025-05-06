@@ -23,5 +23,11 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    // Ensure assets use relative paths
+    assetsDir: "assets",
+    // Make sure the base URL is set correctly for Netlify
+    assetsInlineLimit: 4096,
   },
+  // Set the base URL to work with Netlify
+  base: "/",
 });

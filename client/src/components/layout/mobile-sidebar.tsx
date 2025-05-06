@@ -16,7 +16,11 @@ import {
   Puzzle, 
   Settings, 
   Crown,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  Bell,
+  FileText,
+  Calendar
 } from "lucide-react";
 
 interface MobileSidebarProps {
@@ -51,160 +55,207 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       {/* Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-50 md:hidden"
+          className="fixed inset-0 bg-black/70 z-50 md:hidden"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-white z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      } overflow-y-auto`}>
+      {/* Sidebar - LinkedIn Style */}
+      <div 
+        className={`fixed top-0 right-0 bottom-0 w-[80%] max-w-[360px] bg-white z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        } overflow-y-auto`}
+        aria-label="Menu"
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Header with close button */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <h2 className="font-bold text-lg">Menu</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
+        <div className="sticky top-0 bg-white z-10 flex justify-between items-center p-4 border-b border-gray-200">
+          <div className="flex items-center">
+            <Avatar className="h-8 w-8 mr-3">
+              <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
+              <AvatarFallback className="bg-[#0A66C2] text-white text-xs">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="font-medium text-base">{user.name}</h2>
+              <p className="text-xs text-gray-500 line-clamp-1">View profile</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+            aria-label="Close menu"
+          >
+            <X className="h-6 w-6" />
           </Button>
         </div>
 
-        {/* Profile Section */}
-        <div className="p-4 border-b border-gray-200">
-          {/* Avatar and name section */}
-          <div className="flex items-center mb-3">
-            <div className="relative flex-shrink-0 mr-4">
-              <Avatar className="h-14 w-14 border-2 border-white shadow-sm">
-                <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-blue-600 text-white text-lg">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
-              {/* Hiring badge */}
-              <div className="absolute -top-1 -right-1 bg-green-500 text-white text-[8px] font-bold py-0.5 px-1 rounded-sm">
-                #HIRING
-              </div>
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center">
-                <h3 className="font-bold text-base truncate mr-1">{user.name}</h3>
-                <CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Bio and details section */}
-          <div className="mb-3">
-            <p className="text-sm text-gray-600 line-clamp-2">
-              {user.title || "Update your headline"}
-            </p>
-            
-            {user.location && (
-              <div className="flex items-center mt-2 text-xs text-gray-500">
-                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                <span className="truncate">{user.location}</span>
-              </div>
-            )}
-            
-            {user.company && (
-              <div className="flex items-center mt-1 text-xs">
-                <Briefcase className="h-3 w-3 mr-1 text-gray-500 flex-shrink-0" />
-                <span className="font-semibold truncate">{user.company}</span>
-              </div>
-            )}
-          </div>
-          
-          <Button 
-            variant="outline" 
-            className="w-full text-primary border-primary hover:bg-primary/5"
-            onClick={() => handleNavigation("/profile")}
-          >
-            View Profile
-          </Button>
-        </div>
-        
-        {/* Stats Section */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center text-sm text-gray-600">
-              <Eye className="h-4 w-4 mr-2" />
-              <span>Profile viewers</span>
-            </div>
-            <span className="text-primary font-semibold">57</span>
-          </div>
-          
+        {/* Account Section */}
+        <div className="px-4 py-3 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div className="flex items-center text-sm text-gray-600">
-              <BarChart2 className="h-4 w-4 mr-2" />
-              <span>Post impressions</span>
-            </div>
-            <span className="text-primary font-semibold">69</span>
-          </div>
-        </div>
-        
-        {/* Manage Pages Section */}
-        <div className="p-4 border-b border-gray-200">
-          <h4 className="font-semibold text-sm mb-3">Manage pages</h4>
-          
-          <div 
-            className="flex items-center justify-between py-2 px-1 hover:bg-gray-50 rounded-md cursor-pointer"
-            onClick={() => handleNavigation("/company/thevedicherbs")}
-          >
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-blue-100 rounded-md flex items-center justify-center text-blue-600 mr-3">
-                <Building2 className="h-4 w-4" />
-              </div>
-              <span className="text-sm">The Vedic Herbs</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </div>
-        </div>
-        
-        {/* Menu List */}
-        <div className="p-4 border-b border-gray-200">
-          <div 
-            className="flex items-center py-3 hover:bg-gray-50 rounded-md cursor-pointer"
-            onClick={() => handleNavigation("/games")}
-          >
-            <Puzzle className="h-5 w-5 text-gray-500 mr-3" />
-            <span className="text-sm">Puzzle games</span>
+            <h3 className="font-medium text-base">Account</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-[#0A66C2] hover:bg-[#EEF3F8] text-sm h-8 px-3 rounded-full"
+              onClick={() => handleNavigation("/settings")}
+            >
+              Settings
+            </Button>
           </div>
           
+          {/* Premium Badge */}
           <div 
-            className="flex items-center py-3 hover:bg-gray-50 rounded-md cursor-pointer"
-            onClick={() => handleNavigation("/saved-posts")}
-          >
-            <Bookmark className="h-5 w-5 text-gray-500 mr-3" />
-            <span className="text-sm">Saved posts</span>
-          </div>
-          
-          <div 
-            className="flex items-center py-3 hover:bg-gray-50 rounded-md cursor-pointer"
-            onClick={() => handleNavigation("/groups")}
-          >
-            <Users className="h-5 w-5 text-gray-500 mr-3" />
-            <span className="text-sm">Groups</span>
-          </div>
-        </div>
-        
-        {/* Bottom Actions */}
-        <div className="p-4">
-          <div 
-            className="flex items-center py-3 hover:bg-gray-50 rounded-md cursor-pointer"
+            className="mt-3 flex items-center p-3 bg-[#F5FAFF] rounded-lg cursor-pointer"
             onClick={() => handleNavigation("/premium")}
           >
-            <div className="h-5 w-5 flex items-center justify-center text-yellow-500 mr-3">
-              <Crown className="h-5 w-5" />
+            <div className="h-10 w-10 flex items-center justify-center bg-[#F8C77E] rounded-full mr-3">
+              <Crown className="h-5 w-5 text-white" />
             </div>
-            <span className="text-sm">Try Premium for ₹0</span>
+            <div className="flex-1">
+              <h4 className="font-medium text-sm">Try Premium for free</h4>
+              <p className="text-xs text-gray-500">Unlock exclusive tools & insights</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Recent & Groups Section */}
+        <div className="px-4 py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-base">Recent</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-500 hover:bg-gray-100 text-sm h-8 px-2 rounded-full"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
           </div>
           
-          <div 
-            className="flex items-center py-3 hover:bg-gray-50 rounded-md cursor-pointer"
-            onClick={() => handleNavigation("/settings")}
-          >
-            <Settings className="h-5 w-5 text-gray-500 mr-3" />
-            <span className="text-sm">Settings</span>
+          {/* Recent Items */}
+          <div className="space-y-3">
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/groups/tech-founders")}
+            >
+              <Users className="h-5 w-5 text-gray-500 mr-3" />
+              <span className="text-sm text-gray-700">Tech Founders Group</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/events/upcoming")}
+            >
+              <Calendar className="h-5 w-5 text-gray-500 mr-3" />
+              <span className="text-sm text-gray-700">Upcoming Startup Events</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/jobs/saved")}
+            >
+              <Briefcase className="h-5 w-5 text-gray-500 mr-3" />
+              <span className="text-sm text-gray-700">Saved Jobs</span>
+            </div>
+          </div>
+          
+          {/* Groups */}
+          <div className="mt-4">
+            <h4 className="font-medium text-sm text-[#0A66C2] mb-2">Groups</h4>
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/groups")}
+            >
+              <Users className="h-5 w-5 text-gray-500 mr-3" />
+              <span className="text-sm text-gray-700">See all groups</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Main Menu Items */}
+        <div className="px-4 py-3">
+          <h3 className="font-medium text-base mb-3">Visit</h3>
+          
+          <div className="space-y-4">
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/network")}
+            >
+              <Users className="h-5 w-5 text-gray-700 mr-3" />
+              <span className="text-sm font-medium">My Network</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/pitch-room")}
+            >
+              <FileText className="h-5 w-5 text-gray-700 mr-3" />
+              <span className="text-sm font-medium">Pitches</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/jobs")}
+            >
+              <Briefcase className="h-5 w-5 text-gray-700 mr-3" />
+              <span className="text-sm font-medium">Jobs</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/messages")}
+            >
+              <MessageSquare className="h-5 w-5 text-gray-700 mr-3" />
+              <span className="text-sm font-medium">Messaging</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/notifications")}
+            >
+              <Bell className="h-5 w-5 text-gray-700 mr-3" />
+              <span className="text-sm font-medium">Notifications</span>
+              <span className="ml-auto bg-[#CC1016] text-white text-xs font-medium h-5 min-w-5 rounded-full flex items-center justify-center px-1">
+                2
+              </span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/saved-posts")}
+            >
+              <Bookmark className="h-5 w-5 text-gray-700 mr-3" />
+              <span className="text-sm font-medium">Saved Posts</span>
+            </div>
+          </div>
+          
+          {/* Products Section */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-base">Products</h3>
+              <ChevronRight className="h-5 w-5 text-gray-400" />
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+              onClick={() => handleNavigation("/premium")}
+            >
+              <Crown className="h-5 w-5 text-[#F8C77E] mr-3" />
+              <span className="text-sm font-medium">Premium</span>
+            </div>
+            
+            <div 
+              className="flex items-center py-1 hover:bg-gray-50 rounded-md cursor-pointer mt-3"
+              onClick={() => handleNavigation("/pitch-room")}
+            >
+              <FileText className="h-5 w-5 text-[#0A66C2] mr-3" />
+              <span className="text-sm font-medium">Pitch Room</span>
+            </div>
           </div>
         </div>
       </div>

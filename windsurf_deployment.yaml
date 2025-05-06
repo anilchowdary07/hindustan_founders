@@ -1,0 +1,9 @@
+framework: nextjs
+build:
+  command: npm run build
+  directory: dist
+functions:
+  directory: netlify/functions
+environment:
+  DATABASE_URL: ${env.DATABASE_URL}
+  SESSION_SECRET: ${env.SESSION_SECRET}

@@ -36,12 +36,49 @@ const isAdmin = (req: Request, res: Response, next: Function) => {
 // Get platform stats
 adminRouter.get("/stats", isAdmin, async (req: Request, res: Response) => {
   try {
-    const users = await storage.getUsers();
-    const posts = await storage.getPosts();
-    const connections = await storage.getConnections();
-    const articles = await storage.getArticles();
-    const events = await storage.getEvents();
-    const pitches = await storage.getPitches();
+    // Fetch data with error handling for each call
+    let users = [];
+    let posts = [];
+    let connections = [];
+    let articles = [];
+    let events = [];
+    let pitches = [];
+    
+    try {
+      users = await storage.getUsers();
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+    
+    try {
+      posts = await storage.getPosts();
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    }
+    
+    try {
+      connections = await storage.getConnections();
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    }
+    
+    try {
+      articles = await storage.getArticles();
+    } catch (error) {
+      console.error("Error fetching articles:", error);
+    }
+    
+    try {
+      events = await storage.getEvents();
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+    
+    try {
+      pitches = await storage.getPitches();
+    } catch (error) {
+      console.error("Error fetching pitches:", error);
+    }
     
     // Calculate stats
     const stats = {

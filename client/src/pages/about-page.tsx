@@ -141,7 +141,7 @@ export default function AboutPage() {
               Connect with founders, investors, and professionals across India and be part of the startup revolution.
             </p>
             <div className="flex justify-center">
-              <Button variant="secondary" size="lg">
+              <Button variant="secondary" size="lg" onClick={() => window.location.href = "mailto:info@hindustanfounders.com"}>
                 Contact Us
               </Button>
             </div>

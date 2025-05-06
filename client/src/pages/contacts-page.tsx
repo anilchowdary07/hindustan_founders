@@ -485,20 +485,38 @@ export default function ContactsPage() {
 
       {/* Contact Details Dialog */}
       <Dialog open={!!showContactDetails} onOpenChange={() => setShowContactDetails(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Contact Details</DialogTitle>
           </DialogHeader>
           
           {showContactDetails && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center">
                 <Avatar className="h-16 w-16">
                   <AvatarFallback>{showContactDetails.name.charAt(0)}</AvatarFallback>
                   {showContactDetails.avatarUrl && <AvatarImage src={showContactDetails.avatarUrl} />}
                 </Avatar>
                 <div className="ml-4">
-                  <h3 className="text-xl font-semibold">{showContactDetails.name}</h3>
+                  <div className="flex items-center">
+                    <h3 className="text-xl font-semibold">{showContactDetails.name}</h3>
+                    {showContactDetails.isStarred && (
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="ml-2 text-yellow-500"
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    )}
+                  </div>
                   <p className="text-gray-600">
                     {showContactDetails.title}{showContactDetails.company ? ` at ${showContactDetails.company}` : ''}
                   </p>
@@ -508,76 +526,135 @@ export default function ContactsPage() {
                 </div>
               </div>
               
-              <div className="space-y-3 pt-2">
-                {showContactDetails.email && (
+              <div className="border-t border-b py-4">
+                <h4 className="font-medium mb-3">Contact Information</h4>
+                <div className="space-y-3">
+                  {showContactDetails.email && (
+                    <div className="flex items-center">
+                      <Mail className="h-5 w-5 text-gray-500 mr-2" />
+                      <div>
+                        <p className="text-xs text-gray-500">Email</p>
+                        <a href={`mailto:${showContactDetails.email}`} className="text-primary hover:underline">
+                          {showContactDetails.email}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {showContactDetails.phone && (
+                    <div className="flex items-center">
+                      <Phone className="h-5 w-5 text-gray-500 mr-2" />
+                      <div>
+                        <p className="text-xs text-gray-500">Phone</p>
+                        <a href={`tel:${showContactDetails.phone}`} className="text-primary hover:underline">
+                          {showContactDetails.phone}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <h4 className="font-medium mb-3">Professional Information</h4>
+                
+                {showContactDetails.company && (
                   <div className="flex items-center">
-                    <Mail className="h-5 w-5 text-gray-500 mr-2" />
-                    <a href={`mailto:${showContactDetails.email}`} className="text-primary hover:underline">
-                      {showContactDetails.email}
-                    </a>
+                    <Briefcase className="h-5 w-5 text-gray-500 mr-2" />
+                    <div>
+                      <p className="text-xs text-gray-500">Company</p>
+                      <span>{showContactDetails.company}</span>
+                    </div>
                   </div>
                 )}
                 
-                {showContactDetails.phone && (
+                {showContactDetails.title && (
                   <div className="flex items-center">
-                    <Phone className="h-5 w-5 text-gray-500 mr-2" />
-                    <a href={`tel:${showContactDetails.phone}`} className="text-primary hover:underline">
-                      {showContactDetails.phone}
-                    </a>
+                    <Briefcase className="h-5 w-5 text-gray-500 mr-2" />
+                    <div>
+                      <p className="text-xs text-gray-500">Title</p>
+                      <span>{showContactDetails.title}</span>
+                    </div>
                   </div>
                 )}
                 
                 {showContactDetails.location && (
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 text-gray-500 mr-2" />
-                    <span>{showContactDetails.location}</span>
+                    <div>
+                      <p className="text-xs text-gray-500">Location</p>
+                      <span>{showContactDetails.location}</span>
+                    </div>
                   </div>
                 )}
-                
-                <div className="flex items-center">
-                  <Briefcase className="h-5 w-5 text-gray-500 mr-2" />
-                  <span>{showContactDetails.title || "Not specified"}</span>
-                </div>
               </div>
               
-              <div className="pt-4 flex justify-between">
-                <Button variant="outline" asChild>
-                  <Link href={`/messages?contact=${showContactDetails.id}`}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send Message
-                  </Link>
-                </Button>
+              <div className="border-t pt-4">
+                <p className="text-xs text-gray-500 mb-4">
+                  Connected since {formatDate(showContactDetails.connectionDate)}
+                </p>
                 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                      <UserX className="h-4 w-4 mr-2" />
-                      Remove Contact
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remove Contact</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to remove {showContactDetails.name} from your contacts? 
-                        This will also remove them from your network.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={() => {
-                          setContactToRemove(showContactDetails);
-                          setShowContactDetails(null);
-                          removeContact();
-                        }}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
+                <div className="flex justify-between gap-2">
+                  <Button variant="outline" asChild className="flex-1">
+                    <Link href={`/messages?contact=${showContactDetails.id}`}>
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Message
+                    </Link>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => toggleStar(showContactDetails.id)}
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="16" 
+                      height="16" 
+                      viewBox="0 0 24 24" 
+                      fill={showContactDetails.isStarred ? "currentColor" : "none"} 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      className="mr-2"
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    {showContactDetails.isStarred ? "Unstar" : "Star"}
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="flex-1">
+                        <UserX className="h-4 w-4 mr-2" />
                         Remove
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Contact</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove {showContactDetails.name} from your contacts? 
+                          This will also remove them from your network.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => {
+                            setContactToRemove(showContactDetails);
+                            setShowContactDetails(null);
+                            removeContact();
+                          }}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Remove
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </div>
           )}

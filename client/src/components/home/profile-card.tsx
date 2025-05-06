@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { calculateProfileStrength, getProfileCompletionSuggestions } from "@/lib/profile-utils";
 
 export default function ProfileCard() {
   const { user } = useAuth();
@@ -13,24 +14,7 @@ export default function ProfileCard() {
   // Calculate profile strength based on user data
   useEffect(() => {
     if (user) {
-      let strength = 0;
-      
-      // Basic profile - 25%
-      if (user.name) strength += 5;
-      if (user.email) strength += 5;
-      if (user.role) strength += 5;
-      if (user.title) strength += 5;
-      if (user.company) strength += 5;
-      
-      // Additional info - 25%
-      if (user.location) strength += 5;
-      if (user.bio && user.bio.length > 10) strength += 10;
-      if (user.avatarUrl) strength += 10;
-      
-      // We'll assume the rest would come from activity, connections, etc.
-      // For demo purposes, add some random strength
-      strength += 30; // Activity, posts, etc.
-      
+      const strength = calculateProfileStrength(user);
       setProfileStrength(strength);
     }
   }, [user]);
@@ -54,15 +38,15 @@ export default function ProfileCard() {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden md:col-span-1 hover:shadow-md transition-shadow">
-      {/* Cover photo */}
-      <div className="h-24 bg-gradient-to-r from-primary to-blue-600 relative">
-        <div className="absolute inset-0 opacity-20 bg-[url('/patterns/dot-pattern.png')] bg-repeat"></div>
-      </div>
-      
-      {/* Profile content */}
-      <div className="px-4 py-4">
-        {/* Avatar section - positioned at the top center */}
-        <div className="flex justify-center -mt-12 mb-4">
+      {/* Top section with background and avatar */}
+      <div className="relative">
+        {/* Cover background */}
+        <div className="h-16 bg-gradient-to-r from-primary to-blue-600">
+          <div className="absolute inset-0 opacity-20 bg-[url('/patterns/dot-pattern.png')] bg-repeat"></div>
+        </div>
+        
+        {/* Avatar - positioned at top */}
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2">
           <Avatar className="h-20 w-20 border-4 border-white shadow-md">
             <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
             <AvatarFallback className="bg-gradient-to-br from-primary to-blue-600 text-white text-lg">
@@ -70,7 +54,10 @@ export default function ProfileCard() {
             </AvatarFallback>
           </Avatar>
         </div>
-        
+      </div>
+      
+      {/* Profile content - starts below avatar */}
+      <div className="px-6 pt-14 pb-4">
         {/* Name and basic info - centered */}
         <div className="text-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
@@ -78,9 +65,11 @@ export default function ProfileCard() {
             <Badge className="mx-1 mb-1 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors">
               {getRoleDisplay()}
             </Badge>
-            <Badge variant="outline" className="mx-1 mb-1 bg-blue-50 text-blue-600 border-blue-200">
-              Verified
-            </Badge>
+            {user.isVerified && (
+              <Badge variant="outline" className="mx-1 mb-1 bg-blue-50 text-blue-600 border-blue-200">
+                Verified
+              </Badge>
+            )}
           </div>
           <p className="text-gray-600 mt-1">{user.company || ""}</p>
         </div>
@@ -117,8 +106,7 @@ export default function ProfileCard() {
           </div>
           <Progress 
             value={profileStrength} 
-            className="mt-2 h-2" 
-            indicatorClassName={`${
+            className={`mt-2 h-2 ${
               profileStrength >= 80 
                 ? 'bg-gradient-to-r from-green-500 to-green-600' 
                 : profileStrength >= 50 
@@ -144,34 +132,12 @@ export default function ProfileCard() {
             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md border border-blue-100">
               <h4 className="text-sm font-medium text-blue-800 mb-2">Suggested actions:</h4>
               <ul className="text-xs text-blue-700 space-y-2">
-                {!user.bio && (
-                  <li className="flex items-center">
+                {getProfileCompletionSuggestions(user).map((suggestion, index) => (
+                  <li key={index} className="flex items-center">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
-                    <span>Add a professional bio</span>
+                    <span>{suggestion}</span>
                   </li>
-                )}
-                {!user.avatarUrl && (
-                  <li className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
-                    <span>Upload a profile picture</span>
-                  </li>
-                )}
-                {!user.location && (
-                  <li className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
-                    <span>Add your location</span>
-                  </li>
-                )}
-                {!user.company && (
-                  <li className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
-                    <span>Add your company</span>
-                  </li>
-                )}
-                <li className="flex items-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 flex-shrink-0"></div>
-                  <span>Connect with more professionals</span>
-                </li>
+                ))}
               </ul>
             </div>
           </div>

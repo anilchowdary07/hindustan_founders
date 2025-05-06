@@ -2,10 +2,31 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
+import { seedDemoData } from "./demo-data";
+import { addDemoContent } from "./add-demo-content";
+import { storage } from "./storage";
+import cookieParser from "cookie-parser";
+import { setupWebSocketServer } from "./websocket";
 
-const app = express();
+// Create Express app
+export const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser()); // Add cookie parser middleware
+
+// Add CORS headers for WebSocket support
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,11 +58,27 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+// Initialize the app
+const initializeApp = async () => {
   // Seed the database with initial data including admin user
   await seedDatabase();
   
+  // Seed demo data for better user experience
+  try {
+    await seedDemoData(storage);
+    // Add additional demo content
+    await addDemoContent(storage);
+  } catch (error) {
+    console.error('Error seeding demo data:', error);
+  }
+  
   const server = await registerRoutes(app);
+  
+  // Setup WebSocket server
+  const wsServer = setupWebSocketServer(server);
+  
+  // Store WebSocket server in app for use in routes
+  (app as any).wsServer = wsServer;
 
   // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -74,6 +111,15 @@ app.use((req, res, next) => {
   // so the vite middleware can handle client-side routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
+    
+    // Use PORT environment variable if available, otherwise default to 5000
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+    
+    // Listen on all interfaces to support various deployment environments
+    server.listen(port, '0.0.0.0', () => {
+      log(`Server running on port ${port}`);
+      log(`WebSocket server running on ws://localhost:${port}`);
+    });
   } else {
     serveStatic(app);
   }
@@ -83,11 +129,14 @@ app.use((req, res, next) => {
     res.status(404).json({ message: "Resource not found" });
   });
 
-  // Use PORT environment variable if available, otherwise default to 5000
-  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-  
-  // Listen on all interfaces to support various deployment environments
-  server.listen(port, () => {
-    log(`Server running on port ${port}`);
+  return server;
+};
+
+// Check if this is being run directly (not imported by Netlify functions)
+// In Netlify functions, we just want to export the app, not start the server
+if (!process.env.NETLIFY) {
+  initializeApp().catch(err => {
+    console.error("Failed to initialize app:", err);
+    process.exit(1);
   });
-})();
+}

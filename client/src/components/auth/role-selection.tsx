@@ -53,12 +53,19 @@ export default function RoleSelection() {
 
     setIsSubmitting(true);
     try {
-      const res = await apiRequest("PATCH", `/api/users/${user.id}`, {
+      const response = await apiRequest(`/api/users/${user.id}`, "PATCH", {
         role: selectedRole,
       });
       
-      const updatedUser = await res.json();
-      queryClient.setQueryData(["/api/user"], updatedUser);
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to update role");
+      }
+      
+      // Update the user data in the cache
+      queryClient.setQueryData(["user"], {
+        ...user,
+        role: selectedRole
+      });
       
       toast({
         title: "Role selected",

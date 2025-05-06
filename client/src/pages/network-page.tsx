@@ -1,411 +1,857 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import Layout from "@/components/layout/layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, Check, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { UserRoleType } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Search, MapPin, Briefcase, UserPlus, Users, Filter, 
+  MessageSquare, Bell, ChevronDown, ArrowUpRight, X
+} from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-
-// Helper function to get role badge color
-const getRoleBadgeColor = (role: UserRoleType) => {
-  switch (role) {
-    case "founder":
-      return "bg-blue-100 text-blue-800";
-    case "investor":
-      return "bg-green-100 text-green-800";
-    case "student":
-      return "bg-purple-100 text-purple-800";
-    case "job_seeker":
-      return "bg-amber-100 text-amber-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-};
-
-// Helper function to format role text
-const formatRoleText = (role: UserRoleType) => {
-  switch (role) {
-    case "founder":
-      return "Founder";
-    case "investor":
-      return "Investor";
-    case "student":
-      return "Student";
-    case "job_seeker":
-      return "Job Seeker";
-    case "explorer":
-      return "Explorer";
-    default:
-      return role;
-  }
-};
+import { useLocation } from "wouter";
 
 export default function NetworkPage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("people");
+  const [filterType, setFilterType] = useState("all");
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [locationFilter, setLocationFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const { toast } = useToast();
-
-  // Fetch all users
-  const { data: users, isLoading } = useQuery({
-    queryKey: ["/api/users"],
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  
+  // Fetch connections
+  const {
+    data: connections,
+    isLoading: isLoadingConnections,
+  } = useQuery({
+    queryKey: ["/api/connections", searchQuery, filterType],
     queryFn: async () => {
-      const response = await fetch("/api/users");
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
+      try {
+        const params = new URLSearchParams();
+        if (searchQuery) params.append("q", searchQuery);
+        if (filterType !== "all") params.append("type", filterType);
+        
+        const res = await apiRequest(`/api/connections?${params.toString()}`);
+        console.log("API response for connections:", res);
+        
+        // Ensure we always return an array
+        if (res.data) {
+          return Array.isArray(res.data) ? res.data : [res.data];
+        } else {
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching connections:", error);
+        return [];
       }
-      return response.json();
     },
   });
   
-  // State to track connection status for each user
-  const [connectionStatus, setConnectionStatus] = useState<Record<number, 'none' | 'pending' | 'connected'>>({});
-
-  // Fetch connections (for the current user)
-  const { data: connections, isLoading: isLoadingConnections } = useQuery({
-    queryKey: ["/api/connections"],
-    queryFn: async () => {
-      const response = await fetch("/api/connections");
-      if (!response.ok) {
-        // If API not implemented yet, return empty array
-        return [];
-      }
-      return response.json();
-    },
-  });
-
   // Fetch connection requests
-  const { data: requests, isLoading: isLoadingRequests } = useQuery({
+  const {
+    data: connectionRequests,
+    isLoading: isLoadingRequests,
+  } = useQuery({
     queryKey: ["/api/connections/requests"],
     queryFn: async () => {
-      const response = await fetch("/api/connections/requests");
-      if (!response.ok) {
-        // If API not implemented yet, return empty array
+      try {
+        const res = await apiRequest("/api/connections/requests");
+        console.log("API response for connection requests:", res);
+        
+        // Ensure we always return an array
+        if (res.data) {
+          return Array.isArray(res.data) ? res.data : [res.data];
+        } else {
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching connection requests:", error);
         return [];
       }
-      return response.json();
     },
   });
-
-  // Get search query from URL
-  const searchParams = new URLSearchParams(window.location.search);
-  const urlSearchQuery = searchParams.get('search') || '';
-
-  // Update search query state when URL param changes
-  React.useEffect(() => {
-    setSearchQuery(urlSearchQuery);
-  }, [urlSearchQuery]);
-
-  // Filter users based on search query
-  const filteredUsers = users?.filter((user: any) => {
-    const query = searchQuery.toLowerCase();
-    return user.name?.toLowerCase().includes(query) ||
-           user.title?.toLowerCase().includes(query) ||
-           user.company?.toLowerCase().includes(query) ||
-           user.role?.toLowerCase().includes(query);
-  }) || [];
-
+  
+  // Fetch suggestions
+  const {
+    data: suggestions,
+    isLoading: isLoadingSuggestions,
+  } = useQuery({
+    queryKey: ["/api/connections/suggestions"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("/api/connections/suggestions");
+        console.log("API response for suggestions:", res);
+        
+        // Ensure we always return an array
+        if (res.data) {
+          return Array.isArray(res.data) ? res.data : [res.data];
+        } else {
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+        return [];
+      }
+    },
+    // Disable automatic refetching for now to avoid API errors
+    refetchOnWindowFocus: false,
+  });
+  
+  // Mock data for UI demonstration
+  const mockConnections = [
+    {
+      id: 1,
+      name: "Alex Johnson",
+      title: "Software Engineer at Google",
+      avatarUrl: "/avatars/alex.jpg",
+      mutualConnections: 12,
+      isVerified: true,
+    },
+    {
+      id: 2,
+      name: "Sarah Williams",
+      title: "Product Manager at Microsoft",
+      avatarUrl: "/avatars/sarah.jpg",
+      mutualConnections: 8,
+      isVerified: true,
+    },
+    {
+      id: 3,
+      name: "Michael Chen",
+      title: "Startup Founder & CEO",
+      avatarUrl: "/avatars/michael.jpg",
+      mutualConnections: 5,
+      isVerified: false,
+    },
+    {
+      id: 4,
+      name: "Priya Patel",
+      title: "UX Designer at Adobe",
+      avatarUrl: "/avatars/priya.jpg",
+      mutualConnections: 15,
+      isVerified: true,
+    },
+    {
+      id: 5,
+      name: "David Kim",
+      title: "Angel Investor",
+      avatarUrl: "/avatars/david.jpg",
+      mutualConnections: 3,
+      isVerified: true,
+    },
+  ];
+  
+  const mockRequests = [
+    {
+      id: 101,
+      name: "Emma Wilson",
+      title: "Marketing Director at Salesforce",
+      avatarUrl: "/avatars/emma.jpg",
+      mutualConnections: 7,
+      isVerified: true,
+      message: "Hi, I'd love to connect and discuss potential collaborations!",
+    },
+    {
+      id: 102,
+      name: "James Rodriguez",
+      title: "Venture Capitalist at Sequoia",
+      avatarUrl: "/avatars/james.jpg",
+      mutualConnections: 4,
+      isVerified: true,
+      message: "Looking to expand my network with founders in the AI space.",
+    },
+  ];
+  
+  const mockSuggestions = [
+    {
+      id: 201,
+      name: "Olivia Taylor",
+      title: "CTO at Fintech Startup",
+      avatarUrl: "/avatars/olivia.jpg",
+      mutualConnections: 9,
+      isVerified: true,
+    },
+    {
+      id: 202,
+      name: "Noah Garcia",
+      title: "Blockchain Developer",
+      avatarUrl: "/avatars/noah.jpg",
+      mutualConnections: 6,
+      isVerified: false,
+    },
+    {
+      id: 203,
+      name: "Sophia Lee",
+      title: "Data Scientist at Amazon",
+      avatarUrl: "/avatars/sophia.jpg",
+      mutualConnections: 11,
+      isVerified: true,
+    },
+  ];
+  
+  // Use API data with fallback to mock data
+  let displayConnections = connections?.data?.length > 0 ? connections.data : mockConnections;
+  const displayRequests = connectionRequests?.data?.length > 0 ? connectionRequests.data : mockRequests;
+  
+  // Ensure suggestions is always an array
+  const displaySuggestions = suggestions?.data?.length > 0 ? suggestions.data : mockSuggestions;
+  
+  // Log for debugging
+  console.log("Suggestions data:", suggestions);
+  console.log("Display suggestions:", displaySuggestions);
+  
+  // Apply filters to connections
+  if (searchQuery) {
+    displayConnections = displayConnections.filter(conn => 
+      conn.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (conn.title && conn.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }
+  
+  if (locationFilter) {
+    // For location, we should check if the location appears in the title
+    // In a real app, we would have a dedicated location field
+    displayConnections = displayConnections.filter(conn => 
+      conn.title && conn.title.toLowerCase().includes(locationFilter.toLowerCase())
+    );
+  }
+  
+  if (roleFilter) {
+    // For role, we should check if the role appears in the title
+    // In a real app, we would have a dedicated role field
+    displayConnections = displayConnections.filter(conn => 
+      conn.title && conn.title.toLowerCase().includes(roleFilter.toLowerCase())
+    );
+  }
+  
   return (
     <Layout>
-      <div className="container mx-auto py-6 max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Network</h1>
-          <p className="text-muted-foreground">
-            Connect with founders, investors, and professionals in the startup ecosystem
-          </p>
-        </div>
-
-        <div className="flex mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search by name, role, or company"
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button className="ml-2" onClick={() => toast({
-            title: "Filters applied",
-            description: "Your search filters have been applied",
-          })}>Filter</Button>
-        </div>
-
-        <Tabs defaultValue="people" className="space-y-4" onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="people">People</TabsTrigger>
-            <TabsTrigger value="connections">My Connections</TabsTrigger>
-            <TabsTrigger value="requests">Requests</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="people" className="space-y-4">
-            {isLoading ? (
-              // Loading skeleton
-              <div className="space-y-4">
-                {[1, 2, 3].map((n) => (
-                  <Card key={n}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="ml-4 flex-1">
-                          <Skeleton className="h-5 w-48 mb-2" />
-                          <Skeleton className="h-4 w-72" />
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Main content */}
+          <div className="flex-1">
+            <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-4 mb-6">
+              <h1 className="text-2xl font-bold text-[#191919] mb-4">My Network</h1>
+              
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#666666] h-4 w-4" />
+                  <Input
+                    placeholder="Search connections"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 border-[#E0E0E0] focus:ring-[#0A66C2] focus:border-[#0A66C2] rounded-full"
+                  />
+                </div>
+                <div className="relative">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 border-[#E0E0E0] text-[#666666] rounded-full"
+                    onClick={() => setShowFilterMenu(!showFilterMenu)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filter
+                    {(locationFilter || roleFilter) && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 bg-[#E8F3FF] text-[#0A66C2] border-[#0A66C2] text-xs">
+                        {(locationFilter && roleFilter) ? '2' : '1'}
+                      </Badge>
+                    )}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  
+                  {showFilterMenu && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg z-10 border border-[#E0E0E0] p-4">
+                      <h4 className="font-medium text-[#191919] mb-3">Filter Connections</h4>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm text-[#666666] mb-1">Location</label>
+                          <Input 
+                            placeholder="City or Country" 
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-[#666666] mt-1">
+                            Filter connections by their location
+                          </p>
                         </div>
-                        <Skeleton className="h-9 w-24" />
+                        
+                        <div>
+                          <label className="block text-sm text-[#666666] mb-1">Role</label>
+                          <select 
+                            className="w-full p-2 border border-[#E0E0E0] rounded-md"
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value)}
+                          >
+                            <option value="">All Roles</option>
+                            <option value="founder">Founder</option>
+                            <option value="investor">Investor</option>
+                            <option value="developer">Developer</option>
+                            <option value="designer">Designer</option>
+                            <option value="marketer">Marketer</option>
+                          </select>
+                          <p className="text-xs text-[#666666] mt-1">
+                            Filter connections by their professional role
+                          </p>
+                        </div>
+                        
+                        <div className="flex justify-between pt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setLocationFilter("");
+                              setRoleFilter("");
+                              // Apply filters immediately when clearing
+                              setShowFilterMenu(false);
+                            }}
+                          >
+                            Clear All
+                          </Button>
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              // Apply filters
+                              setShowFilterMenu(false);
+                              
+                              // Show a toast if filters are applied
+                              if (locationFilter || roleFilter) {
+                                toast({
+                                  title: "Filters applied",
+                                  description: `Showing connections filtered by ${[
+                                    locationFilter && "location",
+                                    roleFilter && "role"
+                                  ].filter(Boolean).join(" and ")}`,
+                                });
+                              }
+                            }}
+                          >
+                            Apply Filters
+                          </Button>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : filteredUsers.length > 0 ? (
-              <div className="space-y-4">
-                {filteredUsers.map((user) => (
-                  <Card key={user.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={user.avatarUrl || ""} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {user.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="ml-4 flex-1">
-                          <div className="flex items-center">
-                            <h3 className="font-medium text-lg">{user.name}</h3>
-                            {user.isVerified && (
-                              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
-                                Verified
-                              </Badge>
-                            )}
-                            <Badge className={`ml-2 ${getRoleBadgeColor(user.role)}`}>
-                              {formatRoleText(user.role)}
-                            </Badge>
+              
+              <Tabs defaultValue="connections" className="w-full">
+                <TabsList className="grid grid-cols-3 mb-6">
+                  <TabsTrigger value="connections" className="data-[state=active]:bg-[#E8F3FF] data-[state=active]:text-[#0A66C2]">
+                    Connections
+                  </TabsTrigger>
+                  <TabsTrigger value="requests" className="data-[state=active]:bg-[#E8F3FF] data-[state=active]:text-[#0A66C2]">
+                    Requests
+                  </TabsTrigger>
+                  <TabsTrigger value="suggestions" className="data-[state=active]:bg-[#E8F3FF] data-[state=active]:text-[#0A66C2]">
+                    Suggestions
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="connections" className="mt-0">
+                  {isLoadingConnections ? (
+                    <div className="space-y-4">
+                      {Array(5).fill(0).map((_, i) => (
+                        <div key={i} className="flex items-center p-4 border border-[#E0E0E0] rounded-lg">
+                          <Skeleton className="h-12 w-12 rounded-full bg-[#F3F2EF]" />
+                          <div className="ml-4 space-y-2 flex-1">
+                            <Skeleton className="h-4 w-32 bg-[#F3F2EF]" />
+                            <Skeleton className="h-3 w-48 bg-[#F3F2EF]" />
                           </div>
-                          <p className="text-muted-foreground">
-                            {user.title}{user.title && user.company ? " at " : ""}{user.company}
-                          </p>
-                          <p className="text-muted-foreground text-sm mt-1">
-                            {user.location}
-                          </p>
+                          <Skeleton className="h-9 w-24 bg-[#F3F2EF] rounded-md" />
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            // Update connection status for this user
-                            setConnectionStatus(prev => ({
-                              ...prev,
-                              [user.id]: prev[user.id] === 'pending' ? 'none' : 'pending'
-                            }));
-                            
-                            // Show toast based on action
-                            if (connectionStatus[user.id] === 'pending') {
-                              toast({
-                                title: "Connection request cancelled",
-                                description: `Connection request to ${user.name} has been cancelled`,
-                                variant: "destructive"
-                              });
-                            } else {
-                              toast({
-                                title: "Connection request sent",
-                                description: `Connection request sent to ${user.name}`,
-                              });
-                            }
-                          }}
-                          variant={connectionStatus[user.id] === 'pending' ? "destructive" : "default"}
-                        >
-                          {connectionStatus[user.id] === 'pending' ? (
-                            <>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {displayConnections.map((connection) => (
+                        <div key={connection.id} className="flex flex-col sm:flex-row sm:items-center p-4 border border-[#E0E0E0] rounded-lg hover:shadow-md transition-shadow">
+                          <div className="flex items-center flex-1">
+                            <Avatar className="h-12 w-12 border border-[#E0E0E0]">
+                              <AvatarImage src={connection.avatarUrl} alt={connection.name || 'User'} />
+                              <AvatarFallback>{connection.name ? connection.name.charAt(0) : 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="ml-4">
+                              <div className="flex items-center">
+                                <h3 className="font-semibold text-[#191919]">{connection.name || 'Unknown User'}</h3>
+                                {connection.isVerified && (
+                                  <Badge variant="outline" className="ml-2 bg-[#E8F3FF] text-[#0A66C2] border-[#0A66C2] text-xs">
+                                    Verified
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-[#666666]">{connection.title || 'No title'}</p>
+                              <p className="text-xs text-[#666666] mt-1">
+                                <span className="font-medium">{connection.mutualConnections || 0}</span> mutual connections
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-3 sm:mt-0">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="border-[#E0E0E0] text-[#666666] hover:bg-gray-50"
+                              onClick={() => {
+                                toast({
+                                  title: "Message sent",
+                                  description: `You can now chat with ${connection.name || 'this user'}`,
+                                });
+                                navigate("/messages");
+                              }}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Message
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="border-[#E0E0E0] text-[#666666] hover:bg-gray-50"
+                              onClick={() => {
+                                // Show a confirmation dialog
+                                if (window.confirm(`Are you sure you want to remove ${connection.name || 'this user'} from your connections? This action cannot be undone.`)) {
+                                  (async () => {
+                                    try {
+                                      // In a real app, we would make an API call to remove the connection
+                                      // const res = await apiRequest(`/api/connections/${connection.id}`, "DELETE");
+                                      // if (res.error) throw new Error(res.error.message);
+                                      
+                                      // For now, just show a toast
+                                      toast({
+                                        title: "Connection removed",
+                                        description: `You are no longer connected with ${connection.name}`,
+                                      });
+                                      
+                                      // Invalidate the connections query to refresh the list
+                                      queryClient.invalidateQueries({ queryKey: ["/api/connections"] });
+                                    } catch (error) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to remove connection. Please try again.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  })();
+                                }
+                              }}
+                            >
                               <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="h-4 w-4 mr-1" />
-                              Connect
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-muted/30 rounded-lg">
-                <h3 className="text-lg font-medium mb-2">No users found</h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your search filters or check back later
-                </p>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="connections">
-            {isLoadingConnections ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((n) => (
-                  <Card key={n}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="ml-4 flex-1">
-                          <Skeleton className="h-5 w-48 mb-2" />
-                          <Skeleton className="h-4 w-72" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : connections && connections.length > 0 ? (
-              <div className="space-y-4">
-                {connections.map((connection: any) => (
-                  <Card key={connection.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={connection.user.avatarUrl || ""} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {connection.user.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="ml-4 flex-1">
-                          <div className="flex items-center">
-                            <h3 className="font-medium text-lg">{connection.user.name}</h3>
-                            {connection.user.isVerified && (
-                              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
-                                Verified
-                              </Badge>
-                            )}
+                              Remove
+                            </Button>
                           </div>
-                          <p className="text-muted-foreground">
-                            {connection.user.title}{connection.user.title && connection.user.company ? " at " : ""}{connection.user.company}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Connected since {new Date(connection.createdAt).toLocaleDateString()}
-                          </p>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            toast({
-                              title: "Connection removed",
-                              description: `Connection with ${connection.user.name} has been removed`,
-                              variant: "destructive"
-                            });
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="requests" className="mt-0">
+                  {isLoadingRequests ? (
+                    <div className="space-y-4">
+                      {Array(2).fill(0).map((_, i) => (
+                        <div key={i} className="flex items-center p-4 border border-[#E0E0E0] rounded-lg">
+                          <Skeleton className="h-12 w-12 rounded-full bg-[#F3F2EF]" />
+                          <div className="ml-4 space-y-2 flex-1">
+                            <Skeleton className="h-4 w-32 bg-[#F3F2EF]" />
+                            <Skeleton className="h-3 w-48 bg-[#F3F2EF]" />
+                            <Skeleton className="h-3 w-64 bg-[#F3F2EF]" />
+                          </div>
+                          <div className="flex gap-2">
+                            <Skeleton className="h-9 w-20 bg-[#F3F2EF] rounded-md" />
+                            <Skeleton className="h-9 w-20 bg-[#F3F2EF] rounded-md" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : displayRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {displayRequests.map((request) => (
+                        <div key={request.id} className="flex flex-col p-4 border border-[#E0E0E0] rounded-lg hover:shadow-md transition-shadow">
+                          <div className="flex items-center">
+                            <Avatar className="h-12 w-12 border border-[#E0E0E0]">
+                              <AvatarImage src={request.avatarUrl} alt={request.name || 'User'} />
+                              <AvatarFallback>{request.name ? request.name.charAt(0) : 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="ml-4">
+                              <div className="flex items-center">
+                                <h3 className="font-semibold text-[#191919]">{request.name || 'Unknown User'}</h3>
+                                {request.isVerified && (
+                                  <Badge variant="outline" className="ml-2 bg-[#E8F3FF] text-[#0A66C2] border-[#0A66C2] text-xs">
+                                    Verified
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-[#666666]">{request.title || 'No title'}</p>
+                              <p className="text-xs text-[#666666] mt-1">
+                                <span className="font-medium">{request.mutualConnections || 0}</span> mutual connections
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {request.message && (
+                            <div className="mt-3 p-3 bg-[#F9F9F9] rounded-md text-sm text-[#191919]">
+                              "{request.message}"
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2 mt-4 self-end">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="border-[#E0E0E0] text-[#666666] hover:bg-gray-50"
+                                >
+                                  Ignore
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Ignore Connection Request</DialogTitle>
+                                  <DialogDescription>
+                                    Are you sure you want to ignore this connection request? {request.name || 'This user'} won't be notified.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex items-center space-x-4 py-4">
+                                  <Avatar className="h-12 w-12 border border-[#E0E0E0]">
+                                    <AvatarImage src={request.avatarUrl} alt={request.name || 'User'} />
+                                    <AvatarFallback>{request.name ? request.name.charAt(0) : 'U'}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h4 className="font-semibold text-[#191919]">{request.name || 'Unknown User'}</h4>
+                                    <p className="text-sm text-[#666666]">{request.title || 'No title'}</p>
+                                  </div>
+                                </div>
+                                <DialogFooter className="flex justify-between">
+                                  <Button 
+                                    variant="outline" 
+                                    onClick={() => {
+                                      const closeButton = document.querySelector('[data-dialog-close]') as HTMLButtonElement;
+                                      if (closeButton) closeButton.click();
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button 
+                                    variant="destructive"
+                                    onClick={async () => {
+                                      try {
+                                        // In a real app, we would make an API call to ignore the connection request
+                                        // const res = await apiRequest(`/api/connection-requests/${request.id}/ignore`, "POST");
+                                        // if (res.error) throw new Error(res.error.message);
+                                        
+                                        // For now, just show a toast
+                                        toast({
+                                          title: "Request ignored",
+                                          description: `Connection request from ${request.name} has been ignored`,
+                                        });
+                                        
+                                        // Invalidate the connection requests query to refresh the list
+                                        queryClient.invalidateQueries({ queryKey: ["/api/connection-requests"] });
+                                        
+                                        // Close the dialog
+                                        const closeButton = document.querySelector('[data-dialog-close]') as HTMLButtonElement;
+                                        if (closeButton) closeButton.click();
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to ignore connection request. Please try again.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Ignore Request
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                            <Button 
+                              size="sm" 
+                              className="bg-[#0A66C2] hover:bg-[#004182] text-white"
+                              onClick={async () => {
+                                try {
+                                  // In a real app, we would make an API call to accept the connection request
+                                  // const res = await apiRequest(`/api/connection-requests/${request.id}/accept`, "POST");
+                                  // if (res.error) throw new Error(res.error.message);
+                                  
+                                  // For now, just show a toast
+                                  toast({
+                                    title: "Request accepted",
+                                    description: `You are now connected with ${request.name}`,
+                                  });
+                                  
+                                  // Invalidate the relevant queries to refresh the lists
+                                  queryClient.invalidateQueries({ queryKey: ["/api/connection-requests"] });
+                                  queryClient.invalidateQueries({ queryKey: ["/api/connections"] });
+                                } catch (error) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to accept connection request. Please try again.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              Accept
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Bell className="h-12 w-12 text-[#666666] mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold text-[#191919]">No pending requests</h3>
+                      <p className="text-[#666666] mt-1">You don't have any connection requests at the moment</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="suggestions" className="mt-0">
+                  {isLoadingSuggestions ? (
+                    <div className="space-y-4">
+                      {Array(3).fill(0).map((_, i) => (
+                        <div key={i} className="flex items-center p-4 border border-[#E0E0E0] rounded-lg">
+                          <Skeleton className="h-12 w-12 rounded-full bg-[#F3F2EF]" />
+                          <div className="ml-4 space-y-2 flex-1">
+                            <Skeleton className="h-4 w-32 bg-[#F3F2EF]" />
+                            <Skeleton className="h-3 w-48 bg-[#F3F2EF]" />
+                          </div>
+                          <Skeleton className="h-9 w-28 bg-[#F3F2EF] rounded-md" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {displaySuggestions.map((suggestion) => (
+                        <div key={suggestion.id} className="flex flex-col sm:flex-row sm:items-center p-4 border border-[#E0E0E0] rounded-lg hover:shadow-md transition-shadow">
+                          <div className="flex items-center flex-1">
+                            <Avatar className="h-12 w-12 border border-[#E0E0E0]">
+                              <AvatarImage src={suggestion.avatarUrl} alt={suggestion.name || 'User'} />
+                              <AvatarFallback>{suggestion.name ? suggestion.name.charAt(0) : 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="ml-4">
+                              <div className="flex items-center">
+                                <h3 className="font-semibold text-[#191919]">{suggestion.name || 'Unknown User'}</h3>
+                                {suggestion.isVerified && (
+                                  <Badge variant="outline" className="ml-2 bg-[#E8F3FF] text-[#0A66C2] border-[#0A66C2] text-xs">
+                                    Verified
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-[#666666]">{suggestion.title || 'No title'}</p>
+                              <p className="text-xs text-[#666666] mt-1">
+                                <span className="font-medium">{suggestion.mutualConnections || 0}</span> mutual connections
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-0">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="border-[#0A66C2] text-[#0A66C2] hover:bg-[#E8F3FF]"
+                                >
+                                  <UserPlus className="h-4 w-4 mr-1" />
+                                  Connect
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Send Connection Request</DialogTitle>
+                                  <DialogDescription>
+                                    Add a personalized message to your connection request to {suggestion.name || 'this user'}.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex items-center space-x-4 py-4">
+                                  <Avatar className="h-12 w-12 border border-[#E0E0E0]">
+                                    <AvatarImage src={suggestion.avatarUrl} alt={suggestion.name || 'User'} />
+                                    <AvatarFallback>{suggestion.name ? suggestion.name.charAt(0) : 'U'}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h4 className="font-semibold text-[#191919]">{suggestion.name || 'Unknown User'}</h4>
+                                    <p className="text-sm text-[#666666]">{suggestion.title || 'No title'}</p>
+                                  </div>
+                                </div>
+                                <form 
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    const message = formData.get('message') as string;
+                                    
+                                    (async () => {
+                                      try {
+                                        // In a real app, we would make an API call to send a connection request
+                                        // const res = await apiRequest("/api/connection-requests", "POST", {
+                                        //   recipientId: suggestion.id,
+                                        //   message: message
+                                        // });
+                                        // if (res.error) throw new Error(res.error.message);
+                                        
+                                        // For now, just show a toast
+                                        toast({
+                                          title: "Connection request sent",
+                                          description: `Your connection request has been sent to ${suggestion.name || 'the user'}`,
+                                        });
+                                        
+                                        // Invalidate the suggestions query to refresh the list
+                                        queryClient.invalidateQueries({ queryKey: ["/api/connection-suggestions"] });
+                                        
+                                        // Close the dialog
+                                        const closeButton = document.querySelector('[data-dialog-close]') as HTMLButtonElement;
+                                        if (closeButton) closeButton.click();
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to send connection request. Please try again.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    })();
+                                  }}
+                                >
+                                  <div className="grid gap-4 py-4">
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="message">Message</Label>
+                                      <Textarea
+                                        id="message"
+                                        name="message"
+                                        placeholder="I'd like to connect with you!"
+                                        className="min-h-[100px]"
+                                        defaultValue={`Hi ${suggestion.name || 'there'}, I'd like to connect with you!`}
+                                      />
+                                      <p className="text-xs text-[#666666]">
+                                        Adding a personalized message increases the chances of your request being accepted.
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button type="submit" className="bg-[#0A66C2] hover:bg-[#004182]">
+                                      Send Request
+                                    </Button>
+                                  </DialogFooter>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-[#666666] hover:bg-gray-50"
+                              onClick={() => {
+                                // In a real app, we would make an API call to hide this suggestion
+                                toast({
+                                  title: "Suggestion hidden",
+                                  description: `You won't see ${suggestion.name || 'this user'} in your suggestions anymore`,
+                                });
+                              }}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Ignore
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+          
+          {/* Sidebar */}
+          <div className="w-full md:w-80 space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-4">
+              <h3 className="font-semibold text-[#191919] mb-3">Network Statistics</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Users className="h-5 w-5 text-[#0A66C2] mr-2" />
+                    <span className="text-sm text-[#191919]">Connections</span>
+                  </div>
+                  <span className="font-semibold text-[#191919]">{displayConnections.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <UserPlus className="h-5 w-5 text-[#0A66C2] mr-2" />
+                    <span className="text-sm text-[#191919]">Pending Requests</span>
+                  </div>
+                  <span className="font-semibold text-[#191919]">{displayRequests.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Briefcase className="h-5 w-5 text-[#0A66C2] mr-2" />
+                    <span className="text-sm text-[#191919]">Industry Connections</span>
+                  </div>
+                  <span className="font-semibold text-[#191919]">18</span>
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-12 bg-muted/30 rounded-lg">
-                <h3 className="text-lg font-medium mb-2">No connections yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Start building your professional network by connecting with other users
-                </p>
-                <Button onClick={() => setActiveTab("people")}>Find People</Button>
+              <div className="mt-4 pt-4 border-t border-[#E0E0E0]">
+                <Button variant="link" className="text-[#0A66C2] p-0 h-auto text-sm">
+                  View detailed analytics
+                  <ArrowUpRight className="h-3 w-3 ml-1" />
+                </Button>
               </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="requests">
-            {isLoadingRequests ? (
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-4">
+              <h3 className="font-semibold text-[#191919] mb-3">Groups You Might Like</h3>
               <div className="space-y-4">
-                {[1, 2].map((n) => (
-                  <Card key={n}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="ml-4 flex-1">
-                          <Skeleton className="h-5 w-48 mb-2" />
-                          <Skeleton className="h-4 w-72" />
-                        </div>
-                        <div className="space-x-2">
-                          <Skeleton className="h-9 w-9 inline-block" />
-                          <Skeleton className="h-9 w-9 inline-block" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                <div className="flex items-start">
+                  <div className="w-10 h-10 bg-[#E8F3FF] rounded-md flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="h-5 w-5 text-[#0A66C2]" />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-[#191919]">Startup Founders Network</h4>
+                    <p className="text-xs text-[#666666] mt-1">8,542 members</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 h-7 text-xs border-[#0A66C2] text-[#0A66C2] hover:bg-[#E8F3FF]"
+                    >
+                      Join Group
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-10 h-10 bg-[#E8F3FF] rounded-md flex items-center justify-center flex-shrink-0">
+                    <MapPin className="h-5 w-5 text-[#0A66C2]" />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-[#191919]">Tech Entrepreneurs - Bay Area</h4>
+                    <p className="text-xs text-[#666666] mt-1">12,354 members</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 h-7 text-xs border-[#0A66C2] text-[#0A66C2] hover:bg-[#E8F3FF]"
+                    >
+                      Join Group
+                    </Button>
+                  </div>
+                </div>
               </div>
-            ) : requests && requests.length > 0 ? (
-              <div className="space-y-4">
-                {requests.map((request: any) => (
-                  <Card key={request.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={request.user.avatarUrl || ""} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {request.user.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="ml-4 flex-1">
-                          <h3 className="font-medium text-lg">{request.user.name}</h3>
-                          <p className="text-muted-foreground">
-                            {request.user.title}{request.user.title && request.user.company ? " at " : ""}{request.user.company}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Requested {new Date(request.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-200"
-                            onClick={() => {
-                              toast({
-                                title: "Connection accepted",
-                                description: `You are now connected with ${request.user.name}`,
-                              });
-                            }}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-200"
-                            onClick={() => {
-                              toast({
-                                title: "Request declined",
-                                description: `Connection request from ${request.user.name} has been declined`,
-                                variant: "destructive"
-                              });
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="mt-4 pt-4 border-t border-[#E0E0E0]">
+                <Button variant="link" className="text-[#0A66C2] p-0 h-auto text-sm">
+                  Discover more groups
+                  <ArrowUpRight className="h-3 w-3 ml-1" />
+                </Button>
               </div>
-            ) : (
-              <div className="text-center py-12 bg-muted/30 rounded-lg">
-                <h3 className="text-lg font-medium mb-2">No connection requests</h3>
-                <p className="text-muted-foreground">
-                  You don't have any pending connection requests at the moment
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            </div>
+          </div>
+        </div>
       </div>
     </Layout>
   );

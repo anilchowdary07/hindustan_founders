@@ -1,37 +1,63 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Leaf as LeafIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import { LeafIcon } from "../ui/leaf-icon";
 
+// Define the form schemas
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, { message: "Username is required" }),
+  password: z.string().min(1, { message: "Password is required" }),
 });
 
 const registerSchema = z.object({
-  name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email address"),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.string().min(1, "Role is required"),
+  name: z.string().min(1, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+  username: z.string().min(3, { message: "Username must be at least 3 characters" })
+    .regex(/^[a-zA-Z0-9_]+$/, { message: "Username can only contain letters, numbers, and underscores" }),
+  password: z.string()
+    .min(6, { message: "Password must be at least 6 characters" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, { 
+      message: "Password must contain at least one uppercase letter, one lowercase letter, and one number" 
+    }),
+  confirmPassword: z.string(),
+  role: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
+// Define form value types from the schemas
 type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthForm() {
   const [activeTab, setActiveTab] = useState<string>("login");
-  const { loginMutation, registerMutation } = useAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { login, register, isLoading } = useAuth();
+  const { toast } = useToast();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -48,21 +74,35 @@ export default function AuthForm() {
       email: "",
       username: "",
       password: "",
+      confirmPassword: "",
       role: "founder", // Default role
     },
   });
 
-  const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    const success = await login(data);
+    if (!success) {
+      toast({
+        title: "Login failed",
+        description: "Please check your credentials and try again",
+        variant: "destructive",
+      });
+    }
   };
 
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    // Use the role from the form data
-    registerMutation.mutate(data);
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    const success = await register(data);
+    if (!success) {
+      toast({
+        title: "Registration failed",
+        description: "This username may already be taken",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="w-full max-w-md mt-8">
+    <div className="w-full max-w-md mt-8 mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center">
           <div className="h-10 w-10 bg-primary rounded-md flex items-center justify-center">
@@ -134,14 +174,16 @@ export default function AuthForm() {
                   />
                   <Button 
                     type="submit" 
-                    className="w-full"
-                    disabled={loginMutation.isPending}
+                    className="w-full bg-primary hover:bg-primary/90 text-white"
+                    disabled={isLoading}
                   >
-                    {loginMutation.isPending ? (
+                    {isLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
                     Sign in
                   </Button>
+                  
+
                 </form>
               </Form>
 
@@ -154,12 +196,28 @@ export default function AuthForm() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full flex items-center justify-center">
-                <img 
-                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                  alt="Google" 
-                  className="h-5 w-5 mr-2" 
-                />
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-center"
+                onClick={() => {
+                  setIsGoogleLoading(true);
+                  toast({
+                    title: "Google Authentication",
+                    description: "Google authentication is coming soon!",
+                  });
+                  setTimeout(() => setIsGoogleLoading(false), 1000);
+                }}
+                disabled={isGoogleLoading}
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <img 
+                    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google" 
+                    className="h-5 w-5 mr-2" 
+                  />
+                )}
                 <span>Continue with Google</span>
               </Button>
 
@@ -229,6 +287,20 @@ export default function AuthForm() {
                         <FormControl>
                           <Input type="password" placeholder="Create a password" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={registerForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Confirm your password" {...field} />
+                        </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -258,10 +330,10 @@ export default function AuthForm() {
                   />
                   <Button 
                     type="submit" 
-                    className="w-full"
-                    disabled={registerMutation.isPending}
+                    className="w-full bg-primary hover:bg-primary/90 text-white"
+                    disabled={isLoading}
                   >
-                    {registerMutation.isPending ? (
+                    {isLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
                     Join Hindustan Founders
@@ -278,12 +350,28 @@ export default function AuthForm() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full flex items-center justify-center">
-                <img 
-                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                  alt="Google" 
-                  className="h-5 w-5 mr-2" 
-                />
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-center"
+                onClick={() => {
+                  setIsGoogleLoading(true);
+                  toast({
+                    title: "Google Authentication",
+                    description: "Google authentication is coming soon!",
+                  });
+                  setTimeout(() => setIsGoogleLoading(false), 1000);
+                }}
+                disabled={isGoogleLoading}
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <img 
+                    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google" 
+                    className="h-5 w-5 mr-2" 
+                  />
+                )}
                 <span>Continue with Google</span>
               </Button>
 

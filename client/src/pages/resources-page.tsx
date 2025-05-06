@@ -17,14 +17,20 @@ import {
   Filter,
   ChevronRight,
   Star,
-  Clock
+  Clock,
+  Calendar,
+  MapPin,
+  X
 } from "lucide-react";
+
+// ResourceGridProps interface is already defined below
 
 export default function ResourcesPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [bookmarkedResources, setBookmarkedResources] = useState<number[]>([]);
+  const [showRelatedEvents, setShowRelatedEvents] = useState(true);
 
   // Sample resources data
   const resources = [
@@ -172,17 +178,20 @@ export default function ResourcesPage() {
   });
 
   const toggleBookmark = (id: number) => {
-    setBookmarkedResources(prev => 
-      prev.includes(id) 
+    setBookmarkedResources(prev => {
+      const isCurrentlyBookmarked = prev.includes(id);
+      const newBookmarks = isCurrentlyBookmarked
         ? prev.filter(resourceId => resourceId !== id)
-        : [...prev, id]
-    );
-    
-    const resource = resources.find(r => r.id === id);
-    
-    toast({
-      title: prev => prev.includes(id) ? "Removed from bookmarks" : "Added to bookmarks",
-      description: resource?.title,
+        : [...prev, id];
+      
+      const resource = resources.find(r => r.id === id);
+      
+      toast({
+        title: isCurrentlyBookmarked ? "Removed from bookmarks" : "Added to bookmarks",
+        description: resource?.title,
+      });
+      
+      return newBookmarks;
     });
   };
 
@@ -200,6 +209,28 @@ export default function ResourcesPage() {
       });
     }, 2000);
   };
+
+  // Sample related events data
+  const relatedEvents = [
+    {
+      id: 1,
+      title: "Startup Funding Workshop",
+      date: "June 15, 2025",
+      time: "2:00 PM - 5:00 PM",
+      location: "Online",
+      image: "https://images.unsplash.com/photo-1591115765373-5207764f72e4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
+      tags: ["funding", "workshop", "startup"]
+    },
+    {
+      id: 2,
+      title: "Product Management Masterclass",
+      date: "June 22, 2025",
+      time: "10:00 AM - 4:00 PM",
+      location: "Taj Lands End, Mumbai",
+      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
+      tags: ["product", "management", "masterclass"]
+    }
+  ];
 
   return (
     <Layout>
@@ -229,60 +260,116 @@ export default function ResourcesPage() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex flex-wrap">
-            <TabsTrigger value="all">All Resources</TabsTrigger>
-            <TabsTrigger value="guide">Guides</TabsTrigger>
-            <TabsTrigger value="template">Templates</TabsTrigger>
-            <TabsTrigger value="case study">Case Studies</TabsTrigger>
-            <TabsTrigger value="bookmarked">Bookmarked</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList className="flex flex-wrap">
+                <TabsTrigger value="all">All Resources</TabsTrigger>
+                <TabsTrigger value="guide">Guides</TabsTrigger>
+                <TabsTrigger value="template">Templates</TabsTrigger>
+                <TabsTrigger value="case study">Case Studies</TabsTrigger>
+                <TabsTrigger value="bookmarked">Bookmarked</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
-            <ResourceGrid 
-              resources={filteredResources} 
-              bookmarkedResources={bookmarkedResources}
-              toggleBookmark={toggleBookmark}
-              handleDownload={handleDownload}
-            />
-          </TabsContent>
+              <TabsContent value="all" className="space-y-4">
+                <ResourceGrid 
+                  resources={filteredResources} 
+                  bookmarkedResources={bookmarkedResources}
+                  toggleBookmark={toggleBookmark}
+                  handleDownload={handleDownload}
+                />
+              </TabsContent>
 
-          <TabsContent value="guide" className="space-y-4">
-            <ResourceGrid 
-              resources={filteredResources} 
-              bookmarkedResources={bookmarkedResources}
-              toggleBookmark={toggleBookmark}
-              handleDownload={handleDownload}
-            />
-          </TabsContent>
+              <TabsContent value="guide" className="space-y-4">
+                <ResourceGrid 
+                  resources={filteredResources} 
+                  bookmarkedResources={bookmarkedResources}
+                  toggleBookmark={toggleBookmark}
+                  handleDownload={handleDownload}
+                />
+              </TabsContent>
 
-          <TabsContent value="template" className="space-y-4">
-            <ResourceGrid 
-              resources={filteredResources} 
-              bookmarkedResources={bookmarkedResources}
-              toggleBookmark={toggleBookmark}
-              handleDownload={handleDownload}
-            />
-          </TabsContent>
+              <TabsContent value="template" className="space-y-4">
+                <ResourceGrid 
+                  resources={filteredResources} 
+                  bookmarkedResources={bookmarkedResources}
+                  toggleBookmark={toggleBookmark}
+                  handleDownload={handleDownload}
+                />
+              </TabsContent>
 
-          <TabsContent value="case study" className="space-y-4">
-            <ResourceGrid 
-              resources={filteredResources} 
-              bookmarkedResources={bookmarkedResources}
-              toggleBookmark={toggleBookmark}
-              handleDownload={handleDownload}
-            />
-          </TabsContent>
+              <TabsContent value="case study" className="space-y-4">
+                <ResourceGrid 
+                  resources={filteredResources} 
+                  bookmarkedResources={bookmarkedResources}
+                  toggleBookmark={toggleBookmark}
+                  handleDownload={handleDownload}
+                />
+              </TabsContent>
 
-          <TabsContent value="bookmarked" className="space-y-4">
-            <ResourceGrid 
-              resources={filteredResources.filter(r => bookmarkedResources.includes(r.id))} 
-              bookmarkedResources={bookmarkedResources}
-              toggleBookmark={toggleBookmark}
-              handleDownload={handleDownload}
-            />
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="bookmarked" className="space-y-4">
+                <ResourceGrid 
+                  resources={filteredResources.filter(r => bookmarkedResources.includes(r.id))} 
+                  bookmarkedResources={bookmarkedResources}
+                  toggleBookmark={toggleBookmark}
+                  handleDownload={handleDownload}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {showRelatedEvents && (
+            <div className="lg:col-span-1">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg">Related Events</CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={() => setShowRelatedEvents(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Events related to your interests
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {relatedEvents.map(event => (
+                    <div key={event.id} className="flex gap-3">
+                      <div 
+                        className="h-16 w-16 rounded bg-cover bg-center flex-shrink-0"
+                        style={{ backgroundImage: `url(${event.image})` }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate">{event.title}</h4>
+                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span className="truncate">{event.date}</span>
+                        </div>
+                        <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => window.location.href = '/events'}
+                  >
+                    View All Events
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );

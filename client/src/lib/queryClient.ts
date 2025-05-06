@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getApiUrl } from "./api";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -28,8 +29,8 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Keep the URL as is - no need to modify for different environments
-  let apiUrl = url;
+  // Transform API URL for Netlify if needed
+  let apiUrl = getApiUrl(url);
   
   // Ensure URL is absolute
   if (!apiUrl.startsWith('http')) {
@@ -71,8 +72,8 @@ export const getQueryFn: <T>(options: {
     // Get the URL from the query key
     const url = queryKey[0] as string;
     
-    // Keep URL as is
-    let apiUrl = url;
+    // Transform API URL for Netlify if needed
+    let apiUrl = getApiUrl(url);
     
     // Ensure URL is absolute
     if (!apiUrl.startsWith('http')) {

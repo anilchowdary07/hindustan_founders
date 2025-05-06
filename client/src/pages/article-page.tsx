@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useParams } from "wouter";
+import { useSavedItems } from "@/hooks/use-saved-items";
 
 // Sample article data
 const articles = [
@@ -179,8 +180,16 @@ export default function ArticlePage() {
   const { toast } = useToast();
   const [article, setArticle] = useState(articles.find(a => a.id === id) || articles[0]);
   const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(article.isBookmarked);
+  const { isItemSaved, saveItem, removeItem } = useSavedItems();
+  const [bookmarked, setBookmarked] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  
+  // Check if the article is already saved when the component mounts
+  useEffect(() => {
+    if (article && article.id) {
+      setBookmarked(isItemSaved(article.id.toString()));
+    }
+  }, [article, isItemSaved]);
   
   const getTimeAgo = (date: Date) => {
     return formatDistanceToNow(new Date(date), { addSuffix: true });
@@ -205,14 +214,33 @@ export default function ArticlePage() {
     }
   };
   
+  // Handle bookmarking functionality
+  
   const handleBookmark = () => {
-    setBookmarked(!bookmarked);
-    if (!bookmarked) {
+    const newBookmarkState = !bookmarked;
+    setBookmarked(newBookmarkState);
+    
+    if (newBookmarkState) {
+      // Save the article
+      saveItem({
+        id: article.id.toString(),
+        type: 'article',
+        title: article.title,
+        description: article.excerpt,
+        url: `/articles/${article.id}`,
+        imageUrl: article.coverImage,
+        date: new Date(article.publishedAt),
+        tags: article.tags
+      });
+      
       toast({
         title: "Article bookmarked",
         description: "This article has been saved to your bookmarks",
       });
     } else {
+      // Remove the article
+      removeItem(article.id.toString());
+      
       toast({
         title: "Bookmark removed",
         description: "This article has been removed from your bookmarks",

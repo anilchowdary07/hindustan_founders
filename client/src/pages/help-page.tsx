@@ -1,15 +1,17 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Layout from "@/components/layout/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Search, Mail, MessageSquare, HelpCircle, FileText, ExternalLink } from "lucide-react";
+import { Search, Mail, MessageSquare, HelpCircle, FileText, ExternalLink, TicketIcon, BookOpen, Shield, Cookie } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HelpPage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("faq");
   const [searchQuery, setSearchQuery] = useState("");
   const [contactForm, setContactForm] = useState({
@@ -154,6 +156,57 @@ export default function HelpPage() {
           <p className="text-muted-foreground mt-1">
             Find answers to your questions and get support
           </p>
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <Card className="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onClick={() => navigate("/faq")}>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <HelpCircle className="h-10 w-10 text-primary mb-3" />
+              <h3 className="font-medium text-center">Frequently Asked Questions</h3>
+              <p className="text-sm text-center text-muted-foreground mt-1">Browse our comprehensive FAQ library</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onClick={() => navigate("/support-tickets")}>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <TicketIcon className="h-10 w-10 text-primary mb-3" />
+              <h3 className="font-medium text-center">Support Tickets</h3>
+              <p className="text-sm text-center text-muted-foreground mt-1">Submit and track support requests</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onClick={() => navigate("/contact")}>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <Mail className="h-10 w-10 text-primary mb-3" />
+              <h3 className="font-medium text-center">Contact Us</h3>
+              <p className="text-sm text-center text-muted-foreground mt-1">Get in touch with our team</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onClick={() => navigate("/privacy-policy")}>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <Shield className="h-10 w-10 text-primary mb-3" />
+              <h3 className="font-medium text-center">Privacy Policy</h3>
+              <p className="text-sm text-center text-muted-foreground mt-1">How we collect and use your data</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onClick={() => navigate("/terms-of-service")}>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <BookOpen className="h-10 w-10 text-primary mb-3" />
+              <h3 className="font-medium text-center">Terms of Service</h3>
+              <p className="text-sm text-center text-muted-foreground mt-1">Rules for using our platform</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onClick={() => navigate("/cookie-policy")}>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <Cookie className="h-10 w-10 text-primary mb-3" />
+              <h3 className="font-medium text-center">Cookie Policy</h3>
+              <p className="text-sm text-center text-muted-foreground mt-1">How we use cookies on our site</p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="relative mb-6">

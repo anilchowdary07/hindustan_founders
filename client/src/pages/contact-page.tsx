@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Layout from "@/components/layout/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Mail, MapPin, Phone } from "lucide-react";
+import { Loader2, Mail, MapPin, Phone, HelpCircle, TicketIcon, FileText } from "lucide-react";
 
 // Define form schema
 const contactFormSchema = z.object({
@@ -23,6 +24,7 @@ type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 export default function ContactPage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Contact form
@@ -84,6 +86,50 @@ export default function ContactPage() {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Have questions or feedback? We'd love to hear from you. Reach out to the Hindustan Founders Network team.
           </p>
+        </section>
+        
+        {/* Support Options */}
+        <section className="mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="text-center hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/faq')}>
+              <CardContent className="pt-6">
+                <HelpCircle className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <CardTitle className="mb-2">FAQ</CardTitle>
+                <CardDescription>
+                  Browse our frequently asked questions for quick answers
+                </CardDescription>
+                <Button variant="link" className="mt-4">
+                  View FAQs
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="text-center hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/support-tickets')}>
+              <CardContent className="pt-6">
+                <TicketIcon className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <CardTitle className="mb-2">Support Tickets</CardTitle>
+                <CardDescription>
+                  Submit and track support requests for technical issues
+                </CardDescription>
+                <Button variant="link" className="mt-4">
+                  Submit Ticket
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="text-center hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/help')}>
+              <CardContent className="pt-6">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <CardTitle className="mb-2">Help Center</CardTitle>
+                <CardDescription>
+                  Access guides, tutorials, and other helpful resources
+                </CardDescription>
+                <Button variant="link" className="mt-4">
+                  Visit Help Center
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

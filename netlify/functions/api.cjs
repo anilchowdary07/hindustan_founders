@@ -2,9 +2,9 @@
 const serverless = require('serverless-http');
 const express = require('express');
 const session = require('express-session');
+const PgSession = require('connect-pg-simple')(session);
 const passport = require('passport');
 const { Strategy: LocalStrategy } = require('passport-local');
-const createMemoryStore = require('memorystore');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 
@@ -36,23 +36,23 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Session handling
-const MemoryStore = createMemoryStore(session);
-const sessionStore = new MemoryStore({
-  checkPeriod: 86400000 // 24 hours
+const sessionStore = new PgSession({
+  conString: process.env.DATABASE_URL,
+  ttl: 60 * 60 * 24 // 1 day
 });
 
 app.set("trust proxy", 1);
 app.use(session({
-  secret: process.env.SESSION_SECRET || "hindustan-founders-secret",
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: sessionStore,
   cookie: {
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    secure: false, // Set to false for development
     httpOnly: true,
-    sameSite: 'lax', // Use lax for better compatibility
-    path: '/' // Ensure cookies are available across the site
+    sameSite: 'lax',
+    path: '/'
   }
 }));
 

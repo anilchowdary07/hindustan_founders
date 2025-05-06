@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Founder Network</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background-color: #f9f9f9;
+    }
+    .button {
+      display: inline-block;
+      background-color: #0066cc;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 4px;
+      text-decoration: none;
+      margin-top: 10px;
+    }
+    .button:hover {
+      background-color: #0055aa;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f5f5f5;
+      min-height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Founder Network Test Page</h1>
+  
+  <div class="card">
+    <h2>API Test</h2>
+    <p>Click the buttons below to test the API endpoints:</p>
+    <button class="button" onclick="testHealth()">Test Health</button>
+    <button class="button" onclick="testUser()">Test User</button>
+    <button class="button" onclick="testPosts()">Test Posts</button>
+    
+    <div id="result">
+      <p>Results will appear here...</p>
+    </div>
+  </div>
+
+  <script>
+    async function testHealth() {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        document.getElementById('result').innerHTML = `
+          <h3>Health Check Result:</h3>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <h3>Error:</h3>
+          <pre>${error.message}</pre>
+        `;
+      }
+    }
+
+    async function testUser() {
+      try {
+        const response = await fetch('/api/user');
+        const data = await response.json();
+        document.getElementById('result').innerHTML = `
+          <h3>User Data:</h3>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <h3>Error:</h3>
+          <pre>${error.message}</pre>
+        `;
+      }
+    }
+
+    async function testPosts() {
+      try {
+        const response = await fetch('/api/posts');
+        const data = await response.json();
+        document.getElementById('result').innerHTML = `
+          <h3>Posts Data:</h3>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <h3>Error:</h3>
+          <pre>${error.message}</pre>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

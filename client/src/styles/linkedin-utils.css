@@ -1,0 +1,184 @@
+/* LinkedIn-specific utility classes */
+
+/* Hide scrollbars but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Shimmer animation for skeletons */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #E0E0E0 25%, #F3F2EF 50%, #E0E0E0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Soft shadow like LinkedIn mobile */
+.linkedin-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.linkedin-shadow-md {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* LinkedIn blue focus ring */
+.linkedin-focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #0A66C2;
+}
+
+/* LinkedIn-style tap highlight */
+.linkedin-tap-highlight {
+  -webkit-tap-highlight-color: rgba(10, 102, 194, 0.1);
+}
+
+/* LinkedIn-style transitions */
+.linkedin-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* LinkedIn-style bottom sheet animation */
+@keyframes linkedin-bottom-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes linkedin-bottom-sheet-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.linkedin-bottom-sheet-enter {
+  animation: linkedin-bottom-sheet-in 0.3s forwards cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.linkedin-bottom-sheet-exit {
+  animation: linkedin-bottom-sheet-out 0.3s forwards cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* LinkedIn-style fade animation */
+@keyframes linkedin-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes linkedin-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.linkedin-fade-enter {
+  animation: linkedin-fade-in 0.2s forwards;
+}
+
+.linkedin-fade-exit {
+  animation: linkedin-fade-out 0.2s forwards;
+}
+
+/* LinkedIn-style line clamp utilities */
+.linkedin-line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.linkedin-line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.linkedin-line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* LinkedIn-style safe area insets for notched devices */
+.linkedin-safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.linkedin-safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* LinkedIn-style touch feedback */
+.linkedin-touch-feedback:active {
+  opacity: 0.7;
+}
+
+/* LinkedIn-style badge */
+.linkedin-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background-color: #CC1016;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* LinkedIn-style divider */
+.linkedin-divider {
+  height: 8px;
+  background-color: #F3F2EF;
+  width: 100%;
+}
+
+/* LinkedIn-style card hover effect */
+.linkedin-card-hover:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* LinkedIn-style button hover effect */
+.linkedin-button-hover:hover {
+  background-color: rgba(10, 102, 194, 0.1);
+}
+
+/* LinkedIn-style text truncate */
+.linkedin-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

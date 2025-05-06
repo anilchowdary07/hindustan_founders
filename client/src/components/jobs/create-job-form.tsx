@@ -32,7 +32,8 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { insertJobSchema, JobType, JobLocation } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // Extend the job schema with stronger validation
@@ -74,9 +75,11 @@ export default function CreateJobForm() {
   
   const mutation = useMutation({
     mutationFn: async (values: CreateJobValues) => {
-      const res = await apiRequest("POST", "/api/jobs", values);
-      const data = await res.json();
-      return data;
+      const response = await apiRequest("/api/jobs", "POST", values);
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to create job");
+      }
+      return response.data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });

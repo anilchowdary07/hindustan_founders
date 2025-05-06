@@ -8,27 +8,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, LineChart, PieChart, Activity, Users, TrendingUp, Download, Calendar, Filter } from "lucide-react";
 
-// Import chart components from recharts - using dynamic imports to avoid SSR issues
-import dynamic from "next/dynamic";
-
-const DynamicCharts = dynamic(() => import("recharts").then((mod) => ({
-  AreaChart: mod.AreaChart,
-  Area: mod.Area,
-  XAxis: mod.XAxis,
-  YAxis: mod.YAxis,
-  CartesianGrid: mod.CartesianGrid,
-  Tooltip: mod.Tooltip,
-  ResponsiveContainer: mod.ResponsiveContainer,
-  BarChart: mod.BarChart,
-  Bar: mod.Bar,
-  PieChart: mod.PieChart,
-  Pie: mod.Pie,
-  Cell: mod.Cell,
-  Legend: mod.Legend
-})), { ssr: false });
-
-// Destructure the dynamic components
-const {
+// Import chart components from recharts directly
+import {
   AreaChart,
   Area,
   XAxis,
@@ -36,13 +17,16 @@ const {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart: RechartsBarChart,
+  BarChart as RechartsBarChart,
   Bar,
-  PieChart: RechartsPieChart,
+  PieChart as RechartsPieChart,
   Pie,
   Cell,
   Legend
-} = DynamicCharts || {};
+} from "recharts";
+import { Line } from 'recharts';
+
+// No need for destructuring anymore as we're importing directly
 
 export default function AnalyticsPage() {
   const { user } = useAuth();

@@ -1,20 +1,18 @@
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { 
   HomeIcon, 
   Users, 
   Bell,
   Briefcase,
-  MessageCircle,
   PlusCircle,
-  User,
-  FileText,
   Menu,
-  Lightbulb
+  FileText,
+  MessageSquare,
+  Lightbulb,
+  Sparkles
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
-import { Sheet } from "@/components/ui/sheet";
 
 interface MobileNavProps {
   activeTab: string;
@@ -25,7 +23,6 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
   const { user } = useAuth();
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showNav, setShowNav] = useState(true);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   // Handle scroll behavior like LinkedIn (hide on scroll down, show on scroll up)
   useEffect(() => {
@@ -46,17 +43,6 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
-
-  // Get user initials for avatar fallback
-  const getInitials = () => {
-    if (!user?.name) return "HF";
-    return user.name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
 
   const navItems = [
     {
@@ -86,11 +72,11 @@ export default function MobileNav({ activeTab }: MobileNavProps) {
       }
     },
     {
-      name: "Pitches",
-      path: "/pitch-room",
-      icon: FileText,
-      id: "pitches",
-      ariaLabel: "Pitch Room"
+      name: "Jobs",
+      path: "/jobs",
+      icon: Briefcase,
+      id: "jobs",
+      ariaLabel: "Jobs"
     },
     {
       name: "Innovations",
